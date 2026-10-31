@@ -4,7 +4,7 @@ TRAPWIRE — Hardware Serial Bridge & GSM Modem Controller
 =====================================================================================
 Connects the TrapWire Defender Backend (FastAPI WebSocket) to physical hardware:
  1. USB Serial MCU (ESP32 / Arduino Threat Strobe Siren & OLED).
- 2. USB / Serial GSM Module (SIM800L / SIM900) for Out-of-Band Hardware SMS to 9901625399.
+ 2. USB / Serial Hardware Telemetry Forwarder.
  3. Dual-NIC Network Tap telemetry forwarder.
 
 Usage:
@@ -32,7 +32,7 @@ try:
 except ImportError:
     HAS_WEBSOCKETS = False
 
-ADMIN_PHONE = "9901625399"
+ADMIN_PHONE = ""
 SERVER_WS_URL = "ws://127.0.0.1:8000/api/threat-stream"
 SERVER_HTTP_URL = "http://127.0.0.1:8000"
 
@@ -175,9 +175,8 @@ def main():
     args = parser.parse_args()
 
     print("=" * 70)
-    print(" TRAPWIRE — Physical Threat Siren & GSM Bridge v2.4")
-    print(" Target Admin SMS: +91 99016 25399")
-    print(" Defender Server:  http://127.0.0.1:8000")
+    print(" TRAPWIRE — Physical Threat Siren Bridge v2.4")
+    print(" Defender Server:  http://127.0.0.1:8080")
     print("=" * 70)
 
     auto_detect_ports()

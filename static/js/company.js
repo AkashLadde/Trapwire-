@@ -168,66 +168,9 @@ document.getElementById("emergencyViewBtn")?.addEventListener("click", () => {
   document.querySelector('.side-link[data-tab="security"]')?.click();
 });
 
-// ============ SIMULATED ADMIN SMARTPHONE WIDGET ============
-let phoneAlertCount = 0;
-
-function updatePhoneClock() {
-  const clockEl = document.getElementById("phoneClock");
-  if (clockEl) {
-    const now = new Date();
-    clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-}
-setInterval(updatePhoneClock, 10000);
-updatePhoneClock();
-
-function toggleAdminPhone() {
-  const phone = document.getElementById("adminPhoneWidget");
-  if (!phone) return;
-  phone.classList.toggle("hidden");
-  if (!phone.classList.contains("hidden")) {
-    const list = document.getElementById("phoneSmsList");
-    if (list) list.scrollTop = list.scrollHeight;
-  }
-}
-
-function pushAdminPhoneAlert(a) {
-  phoneAlertCount++;
-  const countEl = document.getElementById("phoneAlertCount");
-  if (countEl) countEl.textContent = String(phoneAlertCount);
-
-  const pulse = document.getElementById("phoneBadgePulse");
-  if (pulse) pulse.classList.add("alerting");
-
-  // Vibrate phone UI
-  const phone = document.getElementById("adminPhoneWidget");
-  if (phone) {
-    phone.classList.add("vibrating");
-    setTimeout(() => phone.classList.remove("vibrating"), 1800);
-  }
-
-  // Update push notification banner on phone lockscreen
-  const banner = document.getElementById("phonePushBanner");
-  const pushBody = document.getElementById("pushBodyText");
-  const pushTime = document.getElementById("pushTime");
-  if (banner && pushBody) {
-    banner.style.display = "block";
-    pushBody.textContent = a.message;
-    if (pushTime) pushTime.textContent = new Date(a.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
-  // Append SMS record to phone messages
-  const smsList = document.getElementById("phoneSmsList");
-  if (smsList) {
-    const bubble = document.createElement("div");
-    bubble.className = `sms-bubble alert-${a.level || 'info'}`;
-    const t = new Date(a.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const sender = a.level === "critical" ? "🚨 DPDP ALERT" : a.level === "warning" ? "⚠️ AUTH GUARD" : "🛡️ SOC MONITOR";
-    bubble.innerHTML = `<div><b>${sender}:</b> ${a.message}</div><div class="sms-time">${t}</div>`;
-    smsList.appendChild(bubble);
-    smsList.scrollTop = smsList.scrollHeight;
-  }
-}
+// Stubbed handlers for backwards compatibility
+function toggleAdminPhone() {}
+function pushAdminPhoneAlert(a) {}
 
 // Export button
 const exportBtn = document.getElementById("exportBtn");
@@ -508,7 +451,6 @@ function showThreatToast(a) {
     <div class="toast-meta-pills">
       <span class="toast-pill ip">📡 IP: ${ip}</span>
       <span class="toast-pill isp">🏢 ISP: ${isp}</span>
-      <span class="toast-pill sms">📲 SMS: +91 99016 25399</span>
       ${ackNum ? `<span class="toast-pill" style="color:#10B981;border-color:rgba(16,185,129,0.3);">📄 DPB: ${ackNum}</span>` : ''}
     </div>
     ${actionButtonsHtml}

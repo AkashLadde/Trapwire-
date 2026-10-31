@@ -31,10 +31,10 @@ templates = Jinja2Templates(directory=templates_dir)
 TARGET_COMPANY_URL = os.getenv("COMPANY_URL", "http://127.0.0.1:8080")
 
 VPN_NODES = [
-    {"label": "Netherlands - Amsterdam", "fake_ip": "185.220.101.45"},
-    {"label": "Singapore", "fake_ip": "103.253.24.19"},
-    {"label": "USA - New York", "fake_ip": "198.51.100.77"},
-    {"label": "Germany - Frankfurt", "fake_ip": "45.155.204.12"},
+    {"label": "Netherlands - Amsterdam", "fake_ip": "185.20.209.0"},
+    {"label": "Singapore", "fake_ip": "175.41.141.147"},
+    {"label": "USA - New York", "fake_ip": "161.185.157.24"},
+    {"label": "Germany - Frankfurt", "fake_ip": "172.104.137.31"},
 ]
 
 ATTACK_WORDLIST = [

@@ -199,7 +199,6 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
     printLine("│  Autonomous Exploit Lab, Vulnerability Assessment & Deception Research │", "dim");
     printLine("└────────────────────────────────────────────────────────────────────────┘", "cyan");
     printLine("Target Company Host: <b style='color:#00e5ff;'>" + API_BASE + "</b> (Admin Security Center)", "info");
-    printLine("Admin Alert SMS Target: <b style='color:#10b981;'>+91 99016 25399</b> (Real-time Dispatches)", "info");
     printLine("Type <b style='color:#ff003b;'>help</b> for offensive commands, or click any file/tool in the sidebar.", "cyan");
     printLine("");
   }
@@ -297,7 +296,6 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine("<b style='color:#00e5ff;'>TRAPWIRE PENTEST CONSOLE STATUS & TELEMETRY</b>", "cyan");
       printLine("┌─────────────────────────────────────────────────────────────┐", "dim");
       printLine(`│ Target Host:        ${(API_BASE + " (TrapWire Admin)").padEnd(40)}│`, "info");
-      printLine(`│ Admin Alert Target: +91 99016 25399 (Live Dispatches)         │`, "success");
       printLine(`│ VPN Circuit:        ${(state.vpnConnected ? state.vpnNode + " [SPOOFED]" : "DISCONNECTED (Direct)").padEnd(40)}│`, state.vpnConnected ? "cyan" : "dim");
       printLine(`│ Apparent Source IP: ${state.apparentIp.padEnd(40)}│`, "info");
       printLine(`│ Authenticated:      ${(state.isAuthenticated ? "YES (admin)" : "NO (Anonymous)").padEnd(40)}│`, state.isAuthenticated ? "success" : "dim");
@@ -509,11 +507,10 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine("<span class='term-tag tag-error'>[BRUTEFORCE]</span> Initializing automated credential attack module...", "error");
       printLine(`[+] Target: TRAPWIRE Admin Portal (${API_BASE})`, "cyan");
       printLine(`[+] Target Username: <b>${username}</b>`, "cyan");
-      printLine(`[+] Admin Phone Notification Target: <b style="color:#10b981;">+91 99016 25399</b>`, "success");
       printLine(`[*] Loading attack candidate wordlist (${state.wordlist.length} entries)...`, "info");
       printLine("");
 
-      // Notify company server & trigger real SMS to 9901625399
+      // Notify company server of bruteforce event
       if (typeof window.notifyCompanyServer === "function") {
         window.notifyCompanyServer("bruteforce_start");
       }
@@ -574,7 +571,6 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
               printLine("  [!] Session classified as: <b style='color:#ef4444;'>SUSPICIOUS (ISOLATED)</b>", "error");
               printLine("  [+] Honeypot Deception Engine activated: Decoy customer dataset deployed.", "cyan");
               printLine("  [+] Embedded Canary Tracking Tokens ARMED.", "cyan");
-              printLine(`  [!] Emergency SMS dispatched to Admin: <b>+91 99016 25399</b>`, "success");
               printLine(`  [!] Incident recorded on company defender console: <b>${state.incidentId}</b>`, "error");
             }
 
@@ -894,7 +890,6 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine("<span class='term-tag tag-honey'>[+]</span> <b>HONEYPOT TRIGGER: ACTIVE</b> (All personal data SHA-256 hashed & synthetic)", "error");
       printLine(`<span class='term-tag tag-warn'>[+]</span> INCIDENT ID: <b>${state.incidentId}</b>`, "warning");
       printLine("<span class='term-tag tag-error'>[!]</span> <b>DEFENDER ALERT: GENERATED</b> (Logged to Company Security Center & DPB Registry)", "error");
-      printLine("<span class='term-tag tag-success'>[!]</span> <b>SMS NOTIFICATION DISPATCHED</b> to Admin (+91 99016 25399)", "success");
       printLine("");
 
       if (stepExport) {
@@ -922,7 +917,6 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
           printLine("<span class='term-tag tag-error'>[CANARY BEACON]</span> <b>Canary tracking token triggered!</b>", "error");
           printLine("  [!] Attacker de-anonymized via honeypot invoice tracking link.", "warning");
           printLine("  [!] Device fingerprint captured -> Submitted to simulated Data Protection Board.", "info");
-          printLine("  [!] Emergency SMS update dispatched to +91 99016 25399.", "success");
         }, 1000);
       }
     },

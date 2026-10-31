@@ -1,9 +1,8 @@
 """
 TRAPWIRE — Main Enterprise Defender Server & DPDP Compliance Engine (Server 1)
-Runs on http://127.0.0.1:8000
+Runs on http://127.0.0.1:8080
 Manages Admin SOC Dashboard, Honeypot Deception Engine, Canary Token Tracking,
-DPB Statutory Compliance Reporting, Real-Time WebSocket Alerts, MySQL Storage,
-and Out-of-Band Admin SMS Alerts to 9901625399 (+91 99016 25399).
+DPB Statutory Compliance Reporting, Real-Time WebSocket Alerts, and MySQL Storage.
 """
 
 import time
@@ -22,7 +21,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import state, data, reports, dpb, database, lab
-from app.services import sms_service
 
 # Initialize Database (MySQL with SQLite automatic fallback)
 database.init_db()
@@ -191,7 +189,7 @@ async def auto_submit_report(stage: str = "preliminary", reason: str = "Intrusio
 
 
 async def broadcast_alert(alert: dict):
-    """Broadcasts alert to connected admin WebSockets, saves to database, and sends SMS if high-priority."""
+    """Broadcasts alert to connected admin WebSockets and saves to database."""
     # 1. Save to Database
     try:
         database.db_save_alert(alert)
@@ -208,13 +206,6 @@ async def broadcast_alert(alert: dict):
     for ws in dead:
         if ws in state.ADMIN_SOCKETS:
             state.ADMIN_SOCKETS.remove(ws)
-
-    # 3. Dispatches SMS alert to Admin number (9901625399) on Critical/Warning Threat triggers
-    if alert.get("level") in ("critical", "warning") and not alert.get("meta", {}).get("suppress_sms", False):
-        try:
-            sms_service.send_admin_sms_alert(alert["message"])
-        except Exception as e:
-            print(f"[SMS DISPATCH ERROR] {e}")
 
 
 # ------------------------------------------------- Phase 2: lab wiring --
@@ -360,9 +351,7 @@ def company_dashboard(request: Request):
         "request": request,
         "records": records,
         "suspicious": suspicious,
-        "username": request.session.get("username", "admin"),
-        "admin_phone": sms_service.ADMIN_PHONE_FORMATTED,
-        "raw_admin_phone": sms_service.ADMIN_PHONE_NUMBER
+        "username": request.session.get("username", "admin")
     })
 
 
@@ -381,7 +370,7 @@ async def attacker_session_event(request: Request):
     - Attacker successfully logging in
     - Type of attack performed (Brute Force, SQL Injection, Recon, VPN Hop)
     - Data extracted by attacker (Honeypot Decoy exfiltration, Canary token hits)
-    Collects real-time IP, ISP, Geo-location, dispatches SMS to 9901625399,
+    Collects real-time IP, ISP, Geo-location, logs threat intelligence,
     and automatically files statutory breach reports with the Data Protection Board.
     """
     try:
@@ -702,11 +691,10 @@ def hardware_status():
             },
             {
                 "id": "NODE-03",
-                "name": "SIM800L 4G GSM Hardware Modem",
-                "type": "Out-of-Band Hardware SMS Gateway",
-                "admin_number": sms_service.ADMIN_PHONE_FORMATTED,
-                "status": "READY_5G_SIGNAL",
-                "signal_strength": "94%"
+                "name": "SOC Real-Time Threat Engine",
+                "type": "WebSocket Incident Broadcaster",
+                "status": "OPERATIONAL",
+                "signal_strength": "100%"
             }
         ],
         "active_alarm": len(state.ALERTS) > 0 and state.ALERTS[-1].get("level") == "critical"
@@ -715,9 +703,9 @@ def hardware_status():
 
 @app.post("/api/hardware/trigger-test")
 async def hardware_trigger_test():
-    """Manual hardware test to trigger the physical siren and send a test SMS to 9901625399."""
+    """Manual hardware test to trigger the physical siren and SOC alert stream."""
     alert = state.new_alert(
-        f"⚡ HARDWARE INTEGRATION TEST: Physical ESP32 Strobe Alarm activated & Diagnostic SMS dispatched to {sms_service.ADMIN_PHONE_FORMATTED}.",
+        "⚡ HARDWARE INTEGRATION TEST: Physical ESP32 Strobe Alarm activated & SOC alert broadcast.",
         level="warning"
     )
     await broadcast_alert(alert)

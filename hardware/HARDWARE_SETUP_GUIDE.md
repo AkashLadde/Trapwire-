@@ -20,12 +20,12 @@ This guide details how to integrate **physical IoT and embedded hardware** with 
             │   (hardware/serial_bridge.py)│  │   (hardware/raspberry_pi_node.py)
             └─────────┬──────────────┬─┘  └────────────────────────────┘
                       │              │                   │
-         ┌────────────▼───┐    ┌─────▼──────────┐ ┌──────▼─────────────────────┐
-         │ ESP32 STROBE   │    │ GSM SIM800L    │ │ PHYSICAL NETWORK DECOY     │
-         │ SIREN & OLED   │    │ MODEM (USB-TTL)│ │ Decoy SSH:2222, Telnet:2323 │
-         │ Visual Strobe  │    │ Direct SMS to  │ │ Captures rogue LAN scans   │
-         │ Audio Alarm    │    │ +91 99016 25399│ └────────────────────────────┘
-         └────────────────┘    └────────────────┘
+         ┌────────────▼───┐    ┌──────────────────────────────────────────────┐
+         │ ESP32 STROBE   │    │ PHYSICAL NETWORK DECOY                       │
+         │ SIREN & OLED   │    │ Decoy SSH:2222, Telnet:2323                  │
+         │ Visual Strobe  │    │ Captures rogue LAN scans & attacks           │
+         │ Audio Alarm    │    └──────────────────────────────────────────────┘
+         └────────────────┘
 ```
 
 ---
@@ -38,7 +38,7 @@ This guide details how to integrate **physical IoT and embedded hardware** with 
 | **2** | **Display** | 0.96" I2C OLED (SSD1306, 128x64) | Shows live attacker IP & incident text | ₹180 - ₹220 |
 | **3** | **Visual Strobe** | WS2812B NeoPixel 8-LED Stick / Ring | Flashes Crimson Red on breach | ₹120 - ₹180 |
 | **4** | **Audio Alarm** | 5V Active Piezo Buzzer Module | Emits high-priority chirps/sirens | ₹40 - ₹60 |
-| **5** | **GSM / SMS Module** | SIM800L GPRS/GSM + USB-TTL UART | Hardware SMS dispatch to `9901625399` | ₹450 - ₹650 |
+| **5** | **Hardware Controller** | CH340 / CP2102 USB Bridge | Connects ESP32 to server | ₹100 - ₹150 |
 | **6** | **Edge Sensor** | Raspberry Pi 4 Model B (or Pi 3B+ / Zero 2W) | LAN honeypot bait & network sniffer | Existing / Lab |
 | **7** | **Cables & Power** | MicroUSB Data Cables + Breadboard + Jumper Wires | Interconnection | ₹100 |
 
@@ -120,21 +120,11 @@ python hardware/raspberry_pi_node.py --server http://<YOUR_SERVER_IP>:8000 --nod
 The Raspberry Pi will now:
 - Listen on decoy ports (SSH `2222`, Telnet `2323`, SCADA Modbus `5020`, Web Camera `8088`).
 - Send heartbeat telemetry to the **Hardware Nodes** tab on the Company Dashboard.
-- When an intruder scans the network or attempts to connect to these ports, it instantly triggers an intrusion alert, flashes the physical siren, and notifies Admin at **`9901625399`**.
+- When an intruder scans the network or attempts to connect to these ports, it instantly triggers an intrusion alert and flashes the physical siren.
 
 ---
 
-## 7. SMS Dispatch System Verification
-
-TrapWire supports dual-layer Out-of-Band SMS delivery to Admin Phone `9901625399` (`+91 99016 25399`):
-
-1. **Cloud Gateway Relay**: Uses Fast2SMS or Twilio API (configured in `app/services/sms_service.py` via `FAST2SMS_API_KEY`).
-2. **Physical GSM Hardware Relay**: The `serial_bridge.py` directly issues `AT+CMGS` commands to a SIM800L module plugged into USB.
-3. **Audit Logging**: All dispatched SMS messages are recorded with timestamps in the MySQL `sms_audit` table and displayed on the **Administration & Team** dashboard tab and the simulated smartphone viewer.
-
----
-
-## 8. Dual-Server Demonstration Workflow
+## 7. Dual-Server Demonstration Workflow
 
 To demonstrate the complete ecosystem:
 
@@ -143,12 +133,11 @@ To demonstrate the complete ecosystem:
 python run_servers.py
 ```
 
-1. **Defender Console**: Open `http://127.0.0.1:8000` (Company Portal). Log in with `admin` / `admin123`.
+1. **Defender Console**: Open `http://127.0.0.1:8080` (Company Portal). Log in with `admin` / `Admin@2026!`.
 2. **Attacker Console**: Open `http://127.0.0.1:9000` in a separate browser window or device.
 3. **Simulate Attack**: On Port 9000, attempt root login or fire the **SQL Injection** / **Canary Trap** exploit.
 4. **Observe Response**:
    - The Attacker receives simulated fake data.
    - The Company Dashboard immediately triggers an **Emergency Alert Banner** and audio buzzer.
-   - The SMS audit log dispatches an emergency message to **`9901625399`**.
    - The physical ESP32 OLED displays the attacker IP and flashes crimson strobe LEDs.
    - The automated **DPDP statutory compliance breach report** is generated and acknowledged.

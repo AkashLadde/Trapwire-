@@ -20,7 +20,7 @@
     </div>
     <div class="emergency-alert-content">
       <h4 id="emergencyAlertTitle">🚨 CRITICAL INTRUSION DETECTED</h4>
-      <p id="emergencyAlertMsg">Intrusion attempt detected from IP 127.0.0.1. Honeypot deception engaged &amp; SMS dispatched to {{ admin_phone|default('+91 99016 25399') }}.</p>
+      <p id="emergencyAlertMsg">Intrusion attempt detected from IP 127.0.0.1. Honeypot deception engaged and incident quarantined.</p>
     </div>
   </div>
   <div class="emergency-alert-actions">
@@ -116,8 +116,6 @@
       <span>TrapWire Pvt Ltd</span>
       <span class="org-strip-sep">·</span>
       <span class="env-pill">DEFENDER PRODUCTION</span>
-      <span class="org-strip-sep">·</span>
-      <span class="env-pill" style="background:rgba(16,185,129,0.15);color:#34D399;">SMS RELAY: {{ admin_phone|default('+91 99016 25399') }}</span>
     </div>
     <div class="org-strip-right">
       <span class="region">IN-Mumbai · DPDP Engine</span>
@@ -471,7 +469,7 @@
         <div class="panel-card-head"><h2>System Security &amp; Audit Toggles</h2></div>
         <div class="toggle-row"><div><b>Enforce 2FA for all admins</b><p class="muted small">Require an authenticator app at login.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
         <div class="toggle-row"><div><b>Auto session timeout</b><p class="muted small">Sign out idle sessions after 30 minutes.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
-        <div class="toggle-row"><div><b>Real-Time Out-of-Band SMS Alerts</b><p class="muted small">Dispatch SMS to {{ admin_phone|default('+91 99016 25399') }} on threat triggers.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+        <div class="toggle-row"><div><b>Real-Time SOC Broadcast Alerts</b><p class="muted small">Broadcast live threat events across active SOC consoles.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
         <div class="toggle-row"><div><b>Audit logging</b><p class="muted small">Record every admin action for compliance review.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
       </div>
     </div>
@@ -575,11 +573,11 @@
           </div>
           <div class="faq-item">
             <button class="faq-q">What happens when an attacker attempts brute-force login? <span>+</span></button>
-            <div class="faq-a">After 3 failed attempts, the session is isolated to decoy honeypot tables, an immediate SMS is dispatched to +91 99016 25399, and a live alert banner displays in this console.</div>
+            <div class="faq-a">After 3 failed attempts, the session is isolated to decoy honeypot tables, real-time alerts are logged to the SOC Security Center, and a live alert banner displays in this console.</div>
           </div>
           <div class="faq-item">
             <button class="faq-q">How does the hardware integration work? <span>+</span></button>
-            <div class="faq-a">TrapWire integrates with Raspberry Pi edge honeypot nodes, ESP32 physical strobe sirens/buzzers via Serial/Wi-Fi, and SIM800L GSM modules for out-of-band alerting.</div>
+            <div class="faq-a">TrapWire integrates with Raspberry Pi edge honeypot nodes and ESP32 physical strobe sirens/buzzers via Serial/Wi-Fi for physical telemetry.</div>
           </div>
           <div class="faq-item">
             <button class="faq-q">Where can I view auto-submitted statutory reports? <span>+</span></button>
@@ -729,12 +727,12 @@
 
       <div class="stat-card">
         <div class="stat-icon icon-indigo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
         </div>
         <div class="stat-body">
-          <div class="stat-num" style="font-size:1rem;color:#38BDF8;">SIM800L 4G Modem</div>
-          <div class="stat-label">Out-of-Band SMS Module</div>
-          <div class="stat-trend up">+91 99016 25399 · 94% Signal</div>
+          <div class="stat-num" style="font-size:1rem;color:#38BDF8;">SOC Threat Engine</div>
+          <div class="stat-label">Real-Time Threat Broadcaster</div>
+          <div class="stat-trend up">WebSocket Live · Active</div>
         </div>
       </div>
 
@@ -789,10 +787,10 @@
               <td>Displays real-time threat metrics: <code>🚨 BREACH: IP 185.220... | REPORT: DPB ACK</code></td>
             </tr>
             <tr>
-              <td><b>GSM SMS Modem</b></td>
-              <td>SIM800L / Waveshare SIM7600 4G</td>
-              <td>UART GPIO 14/15 or USB</td>
-              <td>Sends hardware SMS dispatches to <b>+91 99016 25399</b> even without internet!</td>
+              <td><b>Hardware Serial Controller</b></td>
+              <td>CH340 / CP2102 USB Bridge</td>
+              <td>USB Serial @ 115200 baud</td>
+              <td>Transmits immediate hardware telemetry to physical siren alarms.</td>
             </tr>
           </tbody>
         </table>
@@ -874,47 +872,6 @@
     </div>
   </div>
 </div>
-
-<!-- FLOATING SOC MOBILE LIVE TOGGLE BUTTON -->
-<button class="phone-toggle-btn" id="phoneToggleBtn" onclick="toggleAdminPhone()">
-  <div class="phone-badge-pulse" id="phoneBadgePulse"></div>
-  <span>📱 SOC Mobile Live (+91 99016 25399)</span>
-</button>
-
-<!-- SIMULATED ADMIN SMARTPHONE OVERLAY -->
-<div class="phone-simulator-overlay hidden" id="adminPhoneWidget">
-  <div class="phone-notch">
-    <div class="phone-speaker-bar"></div>
-    <div class="phone-camera-dot"></div>
-  </div>
-  <div class="phone-screen">
-    <div class="phone-status-bar">
-      <span id="phoneClock">09:41</span>
-      <span>5G · 100% 🔋</span>
-    </div>
-    
-    <!-- Live Push Banner -->
-    <div class="phone-push-banner" id="phonePushBanner" style="display:none;">
-      <div class="push-head">
-        <span>🚨 TRAPWIRE SOC DEFENDER</span>
-        <span id="pushTime">Just now</span>
-      </div>
-      <div class="push-body" id="pushBodyText">
-        Intrusion alert detected on Admin Portal from IP 127.0.0.1.
-      </div>
-    </div>
-
-    <!-- SMS Stream -->
-    <div style="font-size:11px;font-weight:700;color:#94A3B8;margin:6px 0 4px;display:flex;justify-content:space-between;align-items:center;">
-      <span>MESSAGES (DISPATCH LOG)</span>
-      <span style="font-size:10px;color:#38BDF8;">● +91 99016 25399</span>
-    </div>
-    <div class="phone-sms-history" id="phoneSmsList">
-      <div class="sms-bubble">
-        <div><b>TrapWire SOC Bot:</b> System security monitor initialized. Ready for DPDP telemetry dispatches.</div>
-        <div class="sms-time">Today, 09:00 AM</div>
-      </div>
-    </div>
 
 <!-- FORENSIC INCIDENT INSPECTOR MODAL -->
 <div class="modal-overlay hidden" id="forensicModal" style="z-index:10000;">
@@ -1008,7 +965,7 @@ function triggerHardwareTest() {
   fetch("/api/hardware/trigger-test", { method: "POST" })
     .then(r => r.json())
     .then(data => {
-      showToast("Hardware alarm triggered! SMS dispatched to +91 99016 25399.");
+      showToast("Hardware alarm triggered successfully.");
       if (btn) btn.disabled = false;
     })
     .catch(err => {

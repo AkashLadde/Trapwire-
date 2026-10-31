@@ -30,7 +30,6 @@ if __name__ == "__main__":
     print("  TRAPWIRE — DUAL-SERVER ARCHITECTURE LAUNCHER")
     print("  Company Portal (Defender):  http://127.0.0.1:8080")
     print("  Attacker Portal (OffSec):   http://127.0.0.1:9000")
-    print("  Target Admin Number:        +91 99016 25399")
     print("=" * 72)
 
     t1 = threading.Thread(target=run_company_server, daemon=True)
