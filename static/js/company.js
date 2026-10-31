@@ -125,7 +125,7 @@ function pushNotifPanelItem(a) {
   if (empty) empty.remove();
   const t = new Date(a.timestamp * 1000).toLocaleTimeString();
   const div = document.createElement("div");
-  div.className = "alert-item alert-" + a.level;
+  div.className = "alert-item alert-" + (a.level || 'info');
   div.style.margin = "8px";
   div.innerHTML = `<span class="alert-body"><span class="alert-time">${t}</span> ${a.message}</span>`;
   list.prepend(div);
@@ -150,7 +150,6 @@ function showEmergencyAlert(a) {
   msgEl.textContent = a.message;
   banner.classList.remove("hidden");
 
-  // Auto-dismiss after 12 seconds unless new critical alert comes
   if (emergencyDismissTimeout) clearTimeout(emergencyDismissTimeout);
   emergencyDismissTimeout = setTimeout(() => {
     banner.classList.add("hidden");
@@ -176,116 +175,260 @@ function pushAdminPhoneAlert(a) {}
 const exportBtn = document.getElementById("exportBtn");
 if (exportBtn) {
   exportBtn.addEventListener("click", async () => {
-    const res = await fetch("/api/export");
-    const payload = await res.json();
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "customer_export.json";
-    a.click();
-
-    if (window.SUSPICIOUS) {
-      // Simulate the attacker previewing/opening the exfiltrated file,
-      // which is what actually triggers the canary phone-home.
-      const dataEl = document.getElementById("recordsData");
-      const records = dataEl ? JSON.parse(dataEl.textContent) : [];
-      const trackingUrl = records[0] && records[0]._tracking_invoice_url;
-      if (trackingUrl) {
-        setTimeout(() => {
-          const iframe = document.createElement("iframe");
-          iframe.style.display = "none";
-          iframe.src = trackingUrl;
-          document.body.appendChild(iframe);
-          exportBtn.insertAdjacentHTML("afterend",
-            '<p class="msg">File downloaded. (Opening it just triggered a tracking beacon back to the server.)</p>');
-        }, 800);
-      }
-    }
-  });
-}
-
-// Report generation
-const reportBtn = document.getElementById("reportBtn");
-if (reportBtn) {
-  reportBtn.addEventListener("click", async () => {
-    const res = await fetch("/api/report", {method: "POST"});
-    const msg = document.getElementById("reportMsg");
-    if (res.ok) {
-      const blob = await res.blob();
+    try {
+      const res = await fetch("/api/export");
+      const payload = await res.json();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "DPDP_Breach_Report.pdf";
+      a.download = "customer_export.json";
       a.click();
-      msg.textContent = "Report generated and downloaded.";
-      msg.className = "msg";
-    } else {
-      const j = await res.json();
-      msg.textContent = j.error || "No incident to report yet.";
-      msg.className = "msg error";
+
+      if (window.SUSPICIOUS) {
+        const dataEl = document.getElementById("recordsData");
+        const records = dataEl ? JSON.parse(dataEl.textContent) : [];
+        const trackingUrl = records[0] && records[0]._tracking_invoice_url;
+        if (trackingUrl) {
+          setTimeout(() => {
+            const iframe = document.createElement("iframe");
+            iframe.style.display = "none";
+            iframe.src = trackingUrl;
+            document.body.appendChild(iframe);
+            exportBtn.insertAdjacentHTML("afterend",
+              '<p class="msg">File downloaded. (Opening it just triggered a tracking beacon back to the server.)</p>');
+          }, 800);
+        }
+      }
+    } catch (err) {
+      console.error("Export error:", err);
     }
   });
 }
 
-// Threat activity graph
+// ==========================================================================
+// TRAPWIRE NEXT-GEN ENTERPRISE SOC ENGINE
+// ==========================================================================
+window.ALL_ALERTS = [];
+let currentFilter = "all";
+let currentSearch = "";
 let threatChart = null;
-let allSocAlerts = [];
-let latestSocAlert = null;
+let socWs = null;
+let wsReconnectTimer = null;
+let wsReconnectAttempts = 0;
+let pollingFallbackInterval = null;
 
+// 1. Alert Search & Severity Filtering
+window.filterAlerts = function(filterType, btnEl) {
+  currentFilter = filterType;
+  document.querySelectorAll(".alert-filter-chips .filter-chip").forEach(c => c.classList.remove("active"));
+  if (btnEl) btnEl.classList.add("active");
+  renderAlertFeed();
+};
+
+window.handleAlertSearch = function(q) {
+  currentSearch = (q || "").trim().toLowerCase();
+  renderAlertFeed();
+};
+
+const ICONS = {
+  critical: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+};
+
+function renderAlertFeed() {
+  const feed = document.getElementById("alertFeed");
+  if (!feed) return;
+
+  const filtered = window.ALL_ALERTS.filter(a => {
+    if (currentFilter === "critical" && a.level !== "critical") return false;
+    if (currentFilter === "warning" && a.level !== "warning") return false;
+    if (currentFilter === "canary" && !(a.message.toLowerCase().includes("canary") || (a.meta && a.meta.type === "canary_hit"))) return false;
+
+    if (currentSearch) {
+      const hay = (a.message + " " + JSON.stringify(a.meta || {})).toLowerCase();
+      if (!hay.includes(currentSearch)) return false;
+    }
+    return true;
+  });
+
+  feed.innerHTML = "";
+  if (filtered.length === 0) {
+    feed.innerHTML = `
+      <div class="feed-empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <p>${currentSearch ? "No alerts match the search criteria." : "Standing by. Real-time SOC intrusion alerts will stream here instantaneously."}</p>
+      </div>`;
+    return;
+  }
+
+  filtered.forEach(a => {
+    const div = document.createElement("div");
+    div.className = "alert-item alert-" + a.level;
+    div.style.cursor = "pointer";
+    div.title = "Click to inspect attacker forensics";
+    div.onclick = () => openForensicModal(a);
+    const t = new Date(a.timestamp * 1000).toLocaleTimeString();
+    
+    const meta = a.meta || {};
+    const ip = meta.ip || meta.attacker_ip || "";
+    const ack = meta.ack_number || "";
+
+    div.innerHTML = `
+      <span class="alert-ico">${ICONS[a.level] || ICONS.info}</span>
+      <span class="alert-body">
+        <span class="alert-time">${t}</span>
+        ${a.message}
+        ${ip ? `<span class="toast-pill ip" style="margin-left:6px;">📡 ${ip}</span>` : ""}
+        ${ack ? `<span class="toast-pill" style="margin-left:6px;color:#10B981;border-color:rgba(16,185,129,0.3);">📄 Ack: ${ack}</span>` : ""}
+      </span>`;
+    feed.appendChild(div);
+  });
+}
+
+// 2. Adversary Dossier & Live Card Updates
+function updateSocAttackerCard(a) {
+  if (!a) return;
+  const meta = a.meta || {};
+  const ip = meta.ip || meta.attacker_ip || "185.220.101.45";
+  const isp = meta.isp || meta.attacker_isp || "Tor Exit Relay / DataCamp Ltd";
+  const city = meta.city || "Amsterdam";
+  const country = meta.country || "Netherlands";
+  const loc = (city && country) ? `${city}, ${country}` : (country || "Active Relay");
+  const msg = a.message || "";
+
+  const ipEl = document.getElementById("socAttackerIp");
+  const locEl = document.getElementById("socAttackerLoc");
+  const ispEl = document.getElementById("socAttackerIsp");
+  const typeEl = document.getElementById("socAttackType");
+  const dpbStatusEl = document.getElementById("socDpbStatus");
+  const dpbAckEl = document.getElementById("socDpbAck");
+  const decoyStatusEl = document.getElementById("socDecoyStatus");
+  const defconBadge = document.getElementById("socDefconBadge");
+
+  const dossierIp = document.getElementById("dossierIp");
+  const dossierIsp = document.getElementById("dossierIsp");
+  const dossierLoc = document.getElementById("dossierLoc");
+  const socAttackerOs = document.getElementById("socAttackerOs");
+  const socAttackerScreen = document.getElementById("socAttackerScreen");
+  const socAttackerSpecs = document.getElementById("socAttackerSpecs");
+  const socCanaryStatus = document.getElementById("socCanaryStatus");
+  const socPayloadCode = document.getElementById("socPayloadCode");
+  const socTargetEndpoint = document.getElementById("socTargetEndpoint");
+
+  if (ipEl) ipEl.textContent = ip;
+  if (dossierIp) dossierIp.textContent = ip;
+  if (locEl) locEl.innerHTML = `<span class="geo-flag">🇳🇱</span> ${loc}`;
+  if (dossierLoc) dossierLoc.textContent = loc;
+  if (ispEl) ispEl.textContent = isp;
+  if (dossierIsp) dossierIsp.textContent = isp;
+
+  let threatLabel = "Recon & Surface Probe";
+  let defcon = "DEFCON 2 · ELEVATED INTEL";
+  let defconClass = "defcon-2";
+
+  if (msg.includes("SQL")) {
+    threatLabel = "SQL Injection Exploit";
+    defcon = "DEFCON 1 · CRITICAL INTRUSION";
+    defconClass = "defcon-1";
+    if (socPayloadCode) socPayloadCode.textContent = meta.payload || "UNION SELECT username, password_hash FROM admin_users --";
+    if (socTargetEndpoint) socTargetEndpoint.textContent = "/api/orders (SQLi Intercepted)";
+  } else if (msg.includes("BRUTE-FORCE") || meta.type === "bruteforce_start") {
+    threatLabel = "Credential Brute-Force";
+    defcon = "DEFCON 1 · ACTIVE CRACKING";
+    defconClass = "defcon-1";
+    if (socPayloadCode) socPayloadCode.textContent = "DICTIONARY CANDIDATES: admin@123, Welcome@123, Admin@2026!";
+    if (socTargetEndpoint) socTargetEndpoint.textContent = "/company/login (Rate Threshold Exceeded)";
+  } else if (msg.includes("EXFILTRATION") || meta.type === "data_exfiltration") {
+    threatLabel = "Decoy Data Exfiltration";
+    defcon = "DEFCON 1 · STATUTORY BREACH";
+    defconClass = "defcon-1";
+    if (socPayloadCode) socPayloadCode.textContent = "GET /api/export -> customer_export.json (14 PII Decoy Records)";
+    if (socTargetEndpoint) socTargetEndpoint.textContent = "/api/export (Decoy Honeypot Quarantined)";
+  } else if (msg.includes("CANARY") || meta.type === "canary_hit") {
+    threatLabel = "Canary Token Attribution";
+    defcon = "DEFCON 1 · ATTRIBUTED THREAT";
+    defconClass = "defcon-1";
+    if (socCanaryStatus) {
+      socCanaryStatus.textContent = "TRIGGERED & DE-ANONYMIZED";
+      socCanaryStatus.style.color = "#EF4444";
+    }
+  }
+
+  if (typeEl) typeEl.textContent = threatLabel;
+  if (decoyStatusEl) decoyStatusEl.innerHTML = '<span class="kpi-tag amber">HONEYPOT QUARANTINED</span>';
+  if (defconBadge) {
+    defconBadge.textContent = defcon;
+    defconBadge.className = `defcon-badge ${defconClass}`;
+  }
+
+  if (meta.ack_number) {
+    if (dpbStatusEl) dpbStatusEl.textContent = "AUTO-SUBMITTED";
+    if (dpbAckEl) dpbAckEl.innerHTML = `Ack: <b style="color:#F8FAFC;">${meta.ack_number}</b>`;
+  }
+
+  if (meta.screen || meta.platform) {
+    if (socAttackerOs) socAttackerOs.textContent = meta.platform || "Linux x86_64 (Kali Rolling)";
+    if (socAttackerScreen) socAttackerScreen.textContent = `${meta.screen || '1920x1080'} (Canvas Captured)`;
+    if (socAttackerSpecs) socAttackerSpecs.textContent = `${meta.cores || 8} Cores · ${meta.timezone || 'Asia/Kolkata (IST)'}`;
+  }
+}
+
+// 3. Chart.js Threat Activity Timeline Engine
 function initThreatChart(initialAlerts) {
   const canvas = document.getElementById("threatChart");
   if (!canvas || typeof Chart === "undefined") return;
 
-  const ctx = canvas.getContext("2d");
-  const gradient = ctx.createLinearGradient(0, 0, 0, 180);
-  gradient.addColorStop(0, "rgba(239, 68, 68, 0.35)");
-  gradient.addColorStop(0.7, "rgba(239, 68, 68, 0.08)");
-  gradient.addColorStop(1, "rgba(239, 68, 68, 0.0)");
-
-  let labels = [];
-  let points = [];
-  let count = 0;
-
-  if (!initialAlerts || initialAlerts.length < 5) {
-    // Generate realistic background baseline telemetry so the chart looks rich upon launch
-    const now = Date.now();
-    for (let i = 7; i >= 1; i--) {
-      const pastTime = new Date(now - i * 90 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      labels.push(pastTime);
-      count += Math.floor(Math.random() * 2) + 1;
-      points.push(count);
-    }
-  }
-
-  (initialAlerts || []).forEach(a => {
-    if (a.level === "critical" || a.level === "warning") {
-      count += 1;
-      labels.push(new Date(a.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-      points.push(count);
-    }
-  });
-
   if (threatChart) {
-    threatChart.destroy();
+    try { threatChart.destroy(); } catch (e) {}
+    threatChart = null;
   }
+
+  const labels = [];
+  const points = [];
+  const now = Date.now();
+
+  const threatAlerts = (initialAlerts || []).filter(a => a.level === "critical" || a.level === "warning");
+  
+  if (threatAlerts.length >= 2) {
+    let running = 0;
+    threatAlerts.forEach(a => {
+      running += 1;
+      labels.push(new Date(a.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      points.push(running);
+    });
+  } else {
+    for (let i = 8; i >= 1; i--) {
+      const t = new Date(now - i * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      labels.push(t);
+      points.push(Math.max(1, 4 - Math.floor(i / 2)));
+    }
+    labels.push(new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    points.push(points[points.length - 1] + (threatAlerts.length > 0 ? 2 : 1));
+  }
+
+  const ctx = canvas.getContext("2d");
+  const gradient = ctx.createLinearGradient(0, 0, 0, 120);
+  gradient.addColorStop(0, "rgba(239, 68, 68, 0.35)");
+  gradient.addColorStop(1, "rgba(239, 68, 68, 0.0)");
 
   threatChart = new Chart(ctx, {
     type: "line",
     data: {
       labels: labels,
       datasets: [{
-        label: "Interception Telemetry (Cumulative)",
+        label: "Intrusion Frequency & Velocity",
         data: points,
-        borderColor: "#ef4444",
+        borderColor: "#EF4444",
         borderWidth: 2.2,
         backgroundColor: gradient,
         fill: true,
-        tension: 0.35,
-        pointRadius: 3,
-        pointHoverRadius: 6,
-        pointBackgroundColor: "#ef4444",
-        pointBorderColor: "#ffffff"
+        tension: 0.38,
+        pointRadius: 3.5,
+        pointBackgroundColor: "#EF4444",
+        pointBorderColor: "#FFFFFF",
+        pointBorderWidth: 1.5,
       }]
     },
     options: {
@@ -294,25 +437,27 @@ function initThreatChart(initialAlerts) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: "rgba(15, 23, 42, 0.95)",
-          titleColor: "#38bdf8",
-          bodyColor: "#f8fafc",
-          borderColor: "rgba(56, 189, 248, 0.3)",
+          backgroundColor: "#0B1120",
+          titleColor: "#38BDF8",
+          bodyColor: "#F8FAFC",
+          borderColor: "rgba(239, 68, 68, 0.4)",
           borderWidth: 1,
           padding: 10,
-          titleFont: { family: "JetBrains Mono, monospace", size: 11 },
-          bodyFont: { family: "Inter, sans-serif", size: 12 }
+          displayColors: false,
+          callbacks: {
+            label: (ctx) => ` Threat Velocity: ${ctx.parsed.y} detections`
+          }
         }
       },
       scales: {
         x: {
           grid: { color: "rgba(255, 255, 255, 0.05)" },
-          ticks: { color: "#94a3b8", font: { family: "JetBrains Mono, monospace", size: 10 } }
+          ticks: { font: { family: "JetBrains Mono, monospace", size: 10 }, color: "#64748B" }
         },
         y: {
           beginAtZero: true,
           grid: { color: "rgba(255, 255, 255, 0.05)" },
-          ticks: { precision: 0, color: "#94a3b8", font: { family: "JetBrains Mono, monospace", size: 10 } }
+          ticks: { precision: 0, font: { family: "JetBrains Mono, monospace", size: 10 }, color: "#64748B" }
         }
       }
     }
@@ -321,45 +466,255 @@ function initThreatChart(initialAlerts) {
 
 function pushThreatPoint(alert) {
   if (!threatChart) return;
-  const prevCount = threatChart.data.datasets[0].data.slice(-1)[0] || 0;
-  threatChart.data.labels.push(new Date(alert.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-  threatChart.data.datasets[0].data.push(prevCount + 1);
-  if (threatChart.data.labels.length > 20) {
-    threatChart.data.labels.shift();
-    threatChart.data.datasets[0].data.shift();
-  }
-  threatChart.update();
-}
-
-// Live alert feed
-const alertFeed = document.getElementById("alertFeed");
-const submittedReportsBox = document.getElementById("submittedReports");
-
-function renderSubmittedReports() {
-  if (!submittedReportsBox) return;
-  fetch("/api/submitted-reports").then(r => r.json()).then(list => {
-    submittedReportsBox.innerHTML = "";
-    if (list.length === 0) {
-      submittedReportsBox.innerHTML = '<p class="muted small">No reports submitted yet.</p>';
-      return;
+  try {
+    const prev = threatChart.data.datasets[0].data.slice(-1)[0] || 0;
+    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    threatChart.data.labels.push(nowStr);
+    threatChart.data.datasets[0].data.push(prev + (alert.level === "critical" ? 2 : 1));
+    if (threatChart.data.labels.length > 15) {
+      threatChart.data.labels.shift();
+      threatChart.data.datasets[0].data.shift();
     }
-    list.forEach(r => {
-      const t = new Date(r.submitted_at * 1000).toLocaleString();
-      const div = document.createElement("div");
-      div.className = "alert-item";
-      div.innerHTML = `<span class="alert-time">${t}</span>
-        <b>${r.stage.toUpperCase()}</b> report — ${r.incident_id}
-        &nbsp;<a href="/api/submitted-reports/${r.filename}" target="_blank">Download</a>
-        &nbsp;·&nbsp;<a href="/dpb/submission/${r.ack_number}" target="_blank">View DPB Acknowledgement (${r.ack_number})</a>`;
-      submittedReportsBox.appendChild(div);
-    });
-  });
+    threatChart.update("none");
+  } catch (err) {
+    console.warn("Chart point push error:", err);
+  }
 }
 
-// ============ LIVE THREAT TOAST POPUP & ATTRIBUTION SYSTEM ============
-let audioCtx = null;
-let currentForensicAlert = null;
+// 4. Auto-Reconnecting WebSocket Stream with Heartbeat
+function setupAlertWebSocket() {
+  const badge = document.getElementById("socStreamBadge");
+  const textEl = document.getElementById("socStreamText");
 
+  function setBadge(state) {
+    if (!badge || !textEl) return;
+    badge.className = `soc-stream-pill ${state}`;
+    if (state === "online") textEl.textContent = "LIVE WSS STREAMING";
+    else if (state === "reconnecting") textEl.textContent = "RECONNECTING WSS…";
+    else textEl.textContent = "WSS DISCONNECTED";
+  }
+
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  const wsUrl = `${proto}://${location.host}/ws/alerts`;
+
+  try {
+    socWs = new WebSocket(wsUrl);
+  } catch (err) {
+    setBadge("reconnecting");
+    scheduleWsReconnect();
+    return;
+  }
+
+  socWs.onopen = () => {
+    setBadge("online");
+    wsReconnectAttempts = 0;
+    if (pollingFallbackInterval) {
+      clearInterval(pollingFallbackInterval);
+      pollingFallbackInterval = null;
+    }
+  };
+
+  socWs.onmessage = (evt) => {
+    try {
+      const a = JSON.parse(evt.data);
+      handleIncomingAlert(a);
+    } catch (e) {
+      console.error("Alert parse error:", e);
+    }
+  };
+
+  socWs.onerror = () => {
+    setBadge("reconnecting");
+  };
+
+  socWs.onclose = () => {
+    setBadge("reconnecting");
+    scheduleWsReconnect();
+  };
+}
+
+function scheduleWsReconnect() {
+  if (wsReconnectTimer) return;
+  wsReconnectAttempts++;
+  const delay = Math.min(2000 * wsReconnectAttempts, 10000);
+  wsReconnectTimer = setTimeout(() => {
+    wsReconnectTimer = null;
+    setupAlertWebSocket();
+  }, delay);
+
+  if (!pollingFallbackInterval) {
+    pollingFallbackInterval = setInterval(refreshAlertsHttp, 3500);
+  }
+}
+
+function refreshAlertsHttp() {
+  fetch("/api/alerts").then(r => r.json()).then(list => {
+    if (Array.isArray(list) && list.length > window.ALL_ALERTS.length) {
+      const newItems = list.slice(0, list.length - window.ALL_ALERTS.length);
+      newItems.reverse().forEach(handleIncomingAlert);
+    }
+  }).catch(() => {});
+}
+
+function handleIncomingAlert(a) {
+  if (a.id && window.ALL_ALERTS.some(x => x.id === a.id)) return;
+
+  window.ALL_ALERTS.unshift(a);
+  const totalCountEl = document.getElementById("totalAlertsCount");
+  if (totalCountEl) totalCountEl.textContent = String(window.ALL_ALERTS.length);
+
+  renderAlertFeed();
+  try { updateSocAttackerCard(a); } catch (e) {}
+  try { pushThreatPoint(a); } catch (e) {}
+  try { pushNotifPanelItem(a); } catch (e) {}
+  try { bumpNotifBadge(); } catch (e) {}
+  try { showEmergencyAlert(a); } catch (e) {}
+  try { showThreatToast(a); } catch (e) {}
+
+  const securityTab = document.getElementById("tab-security");
+  const dot = document.getElementById("alertDot");
+  if (dot && securityTab && securityTab.classList.contains("hidden")) {
+    dot.classList.add("show");
+  }
+
+  if (a.message && (a.message.includes("submitted to the Data Protection Board") || a.message.includes("DPDP BREACH REPORT AUTO-SUBMITTED"))) {
+    renderSubmittedReports();
+  }
+}
+
+// 5. Submitted DPB Reports Feed
+function renderSubmittedReports() {
+  const box = document.getElementById("submittedReports");
+  if (!box) return;
+
+  fetch("/api/submitted-reports")
+    .then(r => r.json())
+    .then(list => {
+      box.innerHTML = "";
+      if (!list || list.length === 0) {
+        box.innerHTML = '<p class="muted small" style="text-align:center;padding:20px 0;">No filings submitted yet. Trigger an attack to file automatically.</p>';
+        return;
+      }
+      list.forEach(r => {
+        const t = new Date(r.submitted_at * 1000).toLocaleString();
+        const stage = (r.stage || "statutory").toUpperCase();
+        const div = document.createElement("div");
+        div.className = "alert-item alert-critical";
+        div.style.marginBottom = "8px";
+        div.innerHTML = `
+          <span class="alert-ico">📄</span>
+          <span class="alert-body">
+            <span class="alert-time">${t}</span>
+            <b>${stage} NOTIFICATION</b> · Incident <code>${r.incident_id}</code>
+            <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+              <a href="/api/submitted-reports/${r.filename}" target="_blank" class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:0.75rem;">Download PDF ↗</a>
+              <a href="/dpb/submission/${r.ack_number}" target="_blank" class="btn btn-dark btn-sm" style="padding:3px 8px;font-size:0.75rem;">DPB Ack: ${r.ack_number} ↗</a>
+            </div>
+          </span>`;
+        box.appendChild(div);
+      });
+    })
+    .catch(() => {});
+}
+
+// 6. Interactive Offensive Simulation Lab Triggers
+window.toggleSimDropdown = function(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById("socSimMenu");
+  if (menu) menu.classList.toggle("hidden");
+};
+document.addEventListener("click", () => {
+  const menu = document.getElementById("socSimMenu");
+  if (menu) menu.classList.add("hidden");
+});
+
+window.triggerSimEvent = async function(type) {
+  const menu = document.getElementById("socSimMenu");
+  if (menu) menu.classList.add("hidden");
+
+  let payload = "";
+  let target = "/api/orders";
+
+  if (type === "sqli_attack") {
+    payload = "' UNION SELECT id, username, password_hash, email FROM admin_users --";
+    target = "/api/orders?filter=category";
+  } else if (type === "bruteforce_start") {
+    payload = "DICTIONARY_CRACK: Candidate wordlist loaded (123456...Admin@2026!)";
+    target = "/company/login";
+  } else if (type === "data_exfiltration") {
+    payload = "EXFIL_PII: 14 customer records extracted to customer_export.json";
+    target = "/api/export";
+  } else if (type === "canary_hit") {
+    payload = "CANARY_BEACON: tracking_invoice_90412.pdf phoned home";
+    target = "/canary/token-canary-demo-90412";
+  }
+
+  showToast(`⚡ Simulation Fired: ${type.toUpperCase()}`);
+
+  try {
+    const res = await fetch("/api/attacker-session-event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: type,
+        user: "adversary_operator",
+        ip: "185.220.101.45 (Tor Relay Amsterdam)",
+        tool: "TrapWire SOC Simulator",
+        payload: payload,
+        target: target
+      })
+    });
+    const data = await res.json();
+    if (data.dpb_ack) {
+      showToast(`📄 DPB Statutory Ack Received: ${data.dpb_ack}`);
+    }
+  } catch (err) {
+    showToast("Simulation error: " + err.message);
+  }
+};
+
+window.resetSocDemo = async function() {
+  if (!confirm("Reset all SOC incident records, threat timeline points, and simulation state?")) return;
+  try {
+    await fetch("/api/reset-demo");
+    window.ALL_ALERTS = [];
+    renderAlertFeed();
+    renderSubmittedReports();
+    if (threatChart) {
+      initThreatChart([]);
+    }
+    const defconBadge = document.getElementById("socDefconBadge");
+    if (defconBadge) {
+      defconBadge.textContent = "DEFCON 5 · GUARDED";
+      defconBadge.className = "defcon-badge defcon-5";
+    }
+    showToast("Threat matrix state reset successfully.");
+  } catch (err) {
+    showToast("Reset error: " + err.message);
+  }
+};
+
+// 7. Statutory 72-Hour Compliance Countdown Clock
+function init72HourClock() {
+  const hEl = document.getElementById("clockHours");
+  const mEl = document.getElementById("clockMins");
+  const sEl = document.getElementById("clockSecs");
+  if (!hEl || !mEl || !sEl) return;
+
+  let totalSeconds = 72 * 3600 - 45;
+  setInterval(() => {
+    if (totalSeconds > 0) totalSeconds--;
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    hEl.textContent = String(hrs).padStart(2, "0");
+    mEl.textContent = String(mins).padStart(2, "0");
+    sEl.textContent = String(secs).padStart(2, "0");
+  }, 1000);
+}
+
+// 8. Threat Toast Popups
+let audioCtx = null;
 function playAlertChime(level) {
   try {
     if (!audioCtx) {
@@ -385,142 +740,6 @@ function playAlertChime(level) {
   } catch (e) {}
 }
 
-function updateSocAttackerCard(a) {
-  latestSocAlert = a;
-  const meta = a.meta || {};
-  const ip = meta.ip || meta.attacker_ip || "185.220.101.45";
-  const isp = meta.isp || meta.attacker_isp || "Reliance Jio Infocomm Ltd / Tor Exit Node";
-  const city = meta.city || "Amsterdam";
-  const country = meta.country || "Netherlands";
-  const loc = (city && country) ? `${city}, ${country}` : (country || "Active Relay");
-  
-  const ipEl = document.getElementById("socAttackerIp");
-  const locEl = document.getElementById("socAttackerLoc");
-  const ispEl = document.getElementById("socAttackerIsp");
-  const typeEl = document.getElementById("socAttackType");
-  const dpbStatusEl = document.getElementById("socDpbStatus");
-  const dpbAckEl = document.getElementById("socDpbAck");
-  const deviceEl = document.getElementById("socAttackerDevice");
-  const canaryStatusEl = document.getElementById("socCanaryStatus");
-  const decoyStatusEl = document.getElementById("socDecoyStatus");
-
-  if (ipEl) ipEl.textContent = ip;
-  if (locEl) locEl.textContent = `🇳🇱 ${loc}`;
-  if (ispEl) ispEl.textContent = isp;
-  
-  let threatLabel = "Recon & Surface Probe";
-  if (a.message.includes("SQL")) threatLabel = "SQL Injection Exploit";
-  else if (a.message.includes("BRUTE-FORCE") || meta.type === "bruteforce_start") threatLabel = "Credential Brute-Force";
-  else if (a.message.includes("EXFILTRATION") || meta.type === "data_exfiltration") threatLabel = "Decoy Data Exfiltration";
-  else if (a.message.includes("CANARY")) threatLabel = "Canary Token Attribution";
-  else if (a.message.includes("HACKER WORKSTATION") || meta.type === "terminal_login_success") threatLabel = "Attacker Console Active";
-  else if (a.message.includes("LOGIN ATTEMPT") || meta.type === "failed_login" || meta.type === "terminal_login_attempt") threatLabel = "Attacker Login Attempt";
-  else if (a.message.includes("XSS")) threatLabel = "Cross-Site Scripting (XSS)";
-  else if (a.message.includes("TRAVERSAL")) threatLabel = "Path Traversal Probe";
-  else if (a.message.includes("VPN")) threatLabel = "VPN Proxy Spoofing";
-
-  if (typeEl) typeEl.textContent = threatLabel;
-  if (decoyStatusEl) decoyStatusEl.textContent = "Decoy Honeypot Quarantined";
-
-  // Dynamic Kill-Chain Progression Updates
-  const s1 = document.getElementById("kcStep1");
-  const s2 = document.getElementById("kcStep2");
-  const s3 = document.getElementById("kcStep3");
-  const s4 = document.getElementById("kcStep4");
-  const s5 = document.getElementById("kcStep5");
-
-  if (s1) s1.className = "soc-step-item completed";
-  if (s2) s2.className = (a.message.includes("LOGIN") || a.message.includes("BRUTE")) ? "soc-step-item trapped" : "soc-step-item completed";
-  if (s3) s3.className = (a.message.includes("HONEYPOT") || a.message.includes("EXFILTRATION") || a.message.includes("DECOY")) ? "soc-step-item trapped" : "soc-step-item completed";
-
-  if (meta.ack_number) {
-    if (dpbStatusEl) dpbStatusEl.textContent = "AUTO-SUBMITTED";
-    if (dpbAckEl) dpbAckEl.textContent = `Ack: ${meta.ack_number}`;
-    if (s5) s5.className = "soc-step-item completed";
-  }
-
-  if (meta.screen || meta.platform) {
-    if (deviceEl) {
-      deviceEl.textContent = `${meta.platform || 'Linux x86_64'} · Screen ${meta.screen || '1920x1080'} · Cores: ${meta.cores || '8'} · ${meta.timezone || 'Asia/Kolkata'}`;
-    }
-  }
-
-  if (a.message.includes("CANARY") || meta.type === "canary_hit") {
-    if (canaryStatusEl) {
-      canaryStatusEl.textContent = "TRIGGERED & DE-ANONYMIZED";
-      canaryStatusEl.style.color = "#ef4444";
-    }
-    if (s4) s4.className = "soc-step-item trapped";
-  }
-}
-
-function openActiveForensicModal() {
-  if (latestSocAlert) {
-    openForensicModal(latestSocAlert);
-  } else {
-    openForensicModal({
-      level: "critical",
-      message: "Tor Relay adversary intercepted probing admin credentials with brute force.",
-      timestamp: Date.now() / 1000,
-      meta: {
-        ip: "185.220.101.45",
-        isp: "Tor Exit Relay / DataCamp Ltd",
-        city: "Amsterdam",
-        country: "Netherlands",
-        platform: "Linux x86_64 (Kali Rolling)",
-        screen: "1920 x 1080",
-        cores: 8,
-        timezone: "Asia/Kolkata (IST)",
-        payload: "UNION SELECT username, password FROM users --",
-        ack_number: "DPB-2026-ACTIVE"
-      }
-    });
-  }
-}
-
-function simulateTestProbe() {
-  fetch("/api/attacker-session-event", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      event: "credential_stuffing_probe",
-      user: "root",
-      tool: "Hydra Wordlist Simulator",
-      ip: "185.220.101.45 (Tor Exit Node)",
-      isp: "Tor High-Risk Relay",
-      city: "Amsterdam",
-      country: "Netherlands"
-    })
-  }).then(r => r.json()).then(() => {
-    showToast("⚡ Simulated threat probe executed! Watch real-time attribution update.");
-  }).catch(err => {
-    showToast("Probe error: " + err.message);
-  });
-}
-
-function filterSocAlerts(filterType) {
-  const btns = document.querySelectorAll(".soc-filter-btn");
-  btns.forEach(b => b.classList.remove("active"));
-  if (window.event && window.event.target) {
-    window.event.target.classList.add("active");
-  }
-
-  const cards = document.querySelectorAll(".soc-alert-card");
-  cards.forEach(c => {
-    const level = c.getAttribute("data-level");
-    const msg = c.textContent.toLowerCase();
-    if (filterType === "all") {
-      c.style.display = "block";
-    } else if (filterType === "critical") {
-      c.style.display = level === "critical" ? "block" : "none";
-    } else if (filterType === "warning") {
-      c.style.display = level === "warning" ? "block" : "none";
-    } else if (filterType === "honeypot") {
-      c.style.display = (msg.includes("honeypot") || msg.includes("decoy") || msg.includes("canary")) ? "block" : "none";
-    }
-  });
-}
-
 function showThreatToast(a) {
   const stack = document.getElementById("liveToastStack");
   if (!stack) return;
@@ -528,12 +747,12 @@ function showThreatToast(a) {
 
   let title = "🛡️ Security Threat Telemetry";
   if (a.level === "critical") {
-    if (a.message.includes("EXFILTRATION") || a.message.includes("extracted") || a.message.includes("downloaded")) title = "🚨 DATA EXFILTRATION DETECTED";
+    if (a.message.includes("EXFILTRATION")) title = "🚨 DATA EXFILTRATION DETECTED";
     else if (a.message.includes("CANARY")) title = "🎯 CANARY TRACKING BEACON TRIPPED";
     else if (a.message.includes("BRUTE-FORCE")) title = "💥 CREDENTIAL BRUTE-FORCE ATTACK";
     else if (a.message.includes("SQL")) title = "💉 SQL INJECTION EXPLOIT DETECTED";
-    else if (a.message.includes("HACKER WORKSTATION") || a.message.includes("authenticated")) title = "🔑 HACKER WORKSTATION LOGGED IN";
-    else if (a.message.includes("DPDP BREACH REPORT AUTO-SUBMITTED")) title = "📄 STATUTORY DPDP REPORT AUTO-SUBMITTED";
+    else if (a.message.includes("HACKER WORKSTATION")) title = "🚨 HACKER WORKSTATION ACTIVE";
+    else if (a.message.includes("DPDP BREACH REPORT AUTO-SUBMITTED")) title = "📄 STATUTORY DPDP REPORT FILED";
     else title = "🚨 CRITICAL INTRUSION DETECTED";
   } else if (a.level === "warning") {
     if (a.message.includes("LOGIN ATTEMPT")) title = "⚠️ ATTACKER LOGIN ATTEMPT";
@@ -551,7 +770,6 @@ function showThreatToast(a) {
   const ip = meta.ip || meta.attacker_ip || "185.220.101.45";
   const isp = meta.isp || meta.attacker_isp || "Reliance Jio / Tor Relay";
   const ackNum = meta.ack_number || null;
-  const t = new Date((a.timestamp || Date.now() / 1000) * 1000).toLocaleTimeString();
 
   let actionButtonsHtml = `
     <div style="display:flex;gap:8px;margin-top:6px;align-items:center;">
@@ -564,7 +782,7 @@ function showThreatToast(a) {
   if (ackNum) {
     actionButtonsHtml += `
       <a href="/dpb/submission/${ackNum}" target="_blank" class="emergency-btn-dismiss" style="padding:4px 10px;font-size:0.72rem;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
-        <span>DPB Ack: ${ackNum} →</span>
+        <span>DPB Ack: ${ackNum} ↗</span>
       </a>
     `;
   }
@@ -590,7 +808,6 @@ function showThreatToast(a) {
 
   stack.prepend(toast);
 
-  // Auto remove toast after 10 seconds
   setTimeout(() => {
     if (toast.parentNode) {
       toast.style.opacity = "0";
@@ -600,17 +817,17 @@ function showThreatToast(a) {
   }, 10000);
 }
 
-function openForensicModalFromToast(encodedAlert) {
+window.openForensicModalFromToast = function(encodedAlert) {
   try {
     const a = JSON.parse(decodeURIComponent(encodedAlert));
     openForensicModal(a);
   } catch (e) {
     console.error("Forensic modal open error:", e);
   }
-}
+};
 
-function openForensicModal(a) {
-  currentForensicAlert = a;
+// 9. Forensic Dossier Modal
+window.openForensicModal = function(a) {
   const modal = document.getElementById("forensicModal");
   if (!modal) return;
 
@@ -660,103 +877,91 @@ function openForensicModal(a) {
   }
 
   modal.classList.remove("hidden");
-}
+};
 
-function closeForensicModal() {
+window.closeForensicModal = function() {
   const modal = document.getElementById("forensicModal");
   if (modal) modal.classList.add("hidden");
-}
+};
 
-function downloadForensicPdf() {
+window.downloadForensicPdf = function() {
   const btn = document.getElementById("reportBtn");
   if (btn) btn.click();
-}
+};
 
-if (alertFeed && !window.SUSPICIOUS) {
-  const ICONS = {
-    critical: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-    warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
-  };
-  function renderAlert(a) {
-    allSocAlerts.unshift(a);
-    const div = document.createElement("div");
-    div.className = "soc-alert-card alert-" + (a.level || 'info');
-    div.setAttribute("data-level", a.level || 'info');
-    div.onclick = () => openForensicModal(a);
-    
-    const t = new Date((a.timestamp || Date.now() / 1000) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const meta = a.meta || {};
-    const ip = meta.ip || meta.attacker_ip || "185.220.101.45";
-    const levelLabel = (a.level || 'info').toUpperCase();
-    const badgeColor = a.level === "critical" ? "#ef4444" : a.level === "warning" ? "#f59e0b" : "#38bdf8";
+window.showToast = function(msg) {
+  const stack = document.getElementById("liveToastStack");
+  if (!stack) return;
+  const toast = document.createElement("div");
+  toast.className = "threat-toast toast-info";
+  toast.innerHTML = `<div class="toast-head"><span class="toast-title">🛡️ TRAPWIRE SOC</span><button class="toast-close" onclick="this.closest('.threat-toast').remove()">&times;</button></div><div class="toast-msg">${msg}</div><div class="toast-progress"></div>`;
+  stack.prepend(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 6000);
+};
 
-    div.innerHTML = `
-      <div class="soc-alert-meta">
-        <span style="font-weight:700;color:${badgeColor};font-family:var(--ent-font-mono, monospace);">[${levelLabel}]</span>
-        <span style="color:#64748b;font-family:var(--ent-font-mono, monospace);">${t}</span>
-      </div>
-      <div class="soc-alert-msg">${a.message}</div>
-      <div class="soc-alert-tags">
-        <span class="soc-tag">IP: ${ip}</span>
-        <span class="soc-tag" style="color:#38bdf8;cursor:pointer;">Inspect Forensic Dossier →</span>
-      </div>
-    `;
-
-    alertFeed.prepend(div);
-    if (a.message.includes("submitted to the Data Protection Board") || a.message.includes("DPDP BREACH REPORT AUTO-SUBMITTED")) {
-      renderSubmittedReports();
+// 10. Report button handler
+const reportBtn = document.getElementById("reportBtn");
+if (reportBtn) {
+  reportBtn.addEventListener("click", async () => {
+    const msg = document.getElementById("reportMsg");
+    if (msg) {
+      msg.textContent = "Generating official DPDP breach notification PDF…";
+      msg.className = "msg";
     }
-  }
-
-  fetch("/api/alerts").then(r => r.json()).then(list => {
-    if (list && list.length > 0) {
-      list.forEach(renderAlert);
-      updateSocAttackerCard(list[0]);
-    } else {
-      // Seed initial baseline telemetry so the feed is never empty upon first visit
-      const baselineAlerts = [
-        {
-          level: "info",
-          message: "TRAPWIRE Autonomous Threat Deception & SIEM Telemetry Engine initialized.",
-          timestamp: (Date.now() / 1000) - 360,
-          meta: { ip: "127.0.0.1", isp: "Internal SOC Core" }
-        },
-        {
-          level: "warning",
-          message: "External reconnaissance probe on port 8080/443 — isolated by Honeypot sandbox.",
-          timestamp: (Date.now() / 1000) - 180,
-          meta: { ip: "185.220.101.45", isp: "Tor Exit Relay / DataCamp Ltd" }
-        },
-        {
-          level: "critical",
-          message: "Adversary attempted unauthorized admin credentials authentication.",
-          timestamp: (Date.now() / 1000) - 45,
-          meta: { ip: "185.220.101.45", isp: "Tor Exit Relay / DataCamp Ltd", ack_number: "DPB-2026-ACTIVE" }
+    try {
+      const res = await fetch("/api/report", { method: "POST" });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "DPDP_Breach_Notification_Report.pdf";
+        a.click();
+        if (msg) {
+          msg.textContent = "Report generated and downloaded.";
+          msg.className = "msg";
         }
-      ];
-      baselineAlerts.forEach(renderAlert);
-      updateSocAttackerCard(baselineAlerts[2]);
+      } else {
+        const j = await res.json().catch(() => ({}));
+        if (msg) {
+          msg.textContent = j.error || "Unable to generate report.";
+          msg.className = "msg error";
+        }
+      }
+    } catch (e) {
+      if (msg) {
+        msg.textContent = "Download failed: " + e.message;
+        msg.className = "msg error";
+      }
     }
-    initThreatChart((list || []).slice().reverse());
   });
-  renderSubmittedReports();
-
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  const ws = new WebSocket(`${proto}://${location.host}/ws/alerts`);
-  ws.onmessage = (evt) => {
-    const a = JSON.parse(evt.data);
-    renderAlert(a);
-    updateSocAttackerCard(a);
-    pushThreatPoint(a);
-    pushNotifPanelItem(a);
-    bumpNotifBadge();
-    showEmergencyAlert(a);
-    showThreatToast(a);
-    const securityTab = document.getElementById("tab-security");
-    const dot = document.getElementById("alertDot");
-    if (dot && securityTab && securityTab.classList.contains("hidden")) {
-      dot.classList.add("show");
-    }
-  };
 }
+
+// 11. Bootstrapping on Page Load
+document.addEventListener("DOMContentLoaded", () => {
+  init72HourClock();
+
+  if (!window.SUSPICIOUS) {
+    fetch("/api/alerts")
+      .then(r => r.json())
+      .then(list => {
+        if (Array.isArray(list)) {
+          window.ALL_ALERTS = list.slice();
+          const totalCountEl = document.getElementById("totalAlertsCount");
+          if (totalCountEl) totalCountEl.textContent = String(window.ALL_ALERTS.length);
+          renderAlertFeed();
+          if (list.length > 0) {
+            updateSocAttackerCard(list[0]);
+          }
+          initThreatChart(list.slice().reverse());
+        }
+      })
+      .catch(err => {
+        console.warn("Failed to load initial alerts:", err);
+        initThreatChart([]);
+      });
+
+    renderSubmittedReports();
+    setupAlertWebSocket();
+  }
+});

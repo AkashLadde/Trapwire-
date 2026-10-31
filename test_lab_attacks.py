@@ -64,7 +64,7 @@ check("T9b traversal serves DECOY .env", r.status_code == 200 and "DECOY" in r.t
 r = requests.get(f"{B}/lab/files/download", params={"name": "../../../etc/passwd"})
 check("T9c escape beyond sandbox blocked (403, no real passwd)", r.status_code == 403 and "root:" not in r.text)
 
-r = requests.get(f"{B}/lab/fetch", params={"url": "http://127.0.0.1:8000/lab/internal/metadata"})
+r = requests.get(f"{B}/lab/fetch", params={"url": f"{B}/lab/internal/metadata"})
 check("T10a SSRF fetched internal decoy metadata", r.status_code == 200 and "iam_credentials" in r.text)
 r = requests.get(f"{B}/lab/fetch", params={"url": "http://169.254.169.254/latest/meta-data"})
 check("T10b real cloud metadata blocked", r.status_code == 403)

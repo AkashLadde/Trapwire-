@@ -33,8 +33,8 @@ except ImportError:
     HAS_WEBSOCKETS = False
 
 ADMIN_PHONE = ""
-SERVER_WS_URL = "ws://127.0.0.1:8000/api/threat-stream"
-SERVER_HTTP_URL = "http://127.0.0.1:8000"
+SERVER_WS_URL = "ws://127.0.0.1:8080/api/threat-stream"
+SERVER_HTTP_URL = "http://127.0.0.1:8080"
 
 
 class GsmModem:
@@ -121,7 +121,7 @@ class HardwareBridge:
         self.gsm.send_sms(ADMIN_PHONE, msg)
 
     async def listen_threat_stream(self):
-        """Connects to TrapWire WebSocket on port 8000 and listens for live attacks."""
+        """Connects to TrapWire WebSocket on port 8080 and listens for live attacks."""
         print(f"[*] Connecting to TrapWire WebSocket: {SERVER_WS_URL} ...")
         
         while True:

@@ -78,7 +78,7 @@ http://zerodaybroker998237492837492834.onion/exploits
 # Safe demonstration wrapper for ethical intrusion testing
 # ==========================================================
 echo "[+] Initializing simulated breach testing agent..."
-echo "[+] Target environment: Localhost Sandbox (127.0.0.1:8000)"
+echo "[+] Target environment: Localhost Sandbox (127.0.0.1:8080)"
 echo "[+] Mode: Intrusion Detection & DPDP Compliance Verification"`
       },
       "ransom_notes.txt": {
@@ -109,7 +109,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
         size: "5.1 KB",
         type: "log",
         content: `[SESSION LOGS — SIMULATED SECURITY AUDIT]
-08:41:02 [AUTH] Authentication module initialized on :8000
+08:41:02 [AUTH] Authentication module initialized on :8080
 08:41:08 [AUTH] Failed login attempt from 127.0.0.1 (user: admin)
 08:41:11 [AUTH] Failed login attempt from 127.0.0.1 (user: admin)
 08:41:14 [AUTH] Failed login attempt from 127.0.0.1 (user: admin)
@@ -400,7 +400,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
 
       printLine("PORT     STATE SERVICE      REASON", "cyan");
       printLine("80/tcp   open  http         uvicorn / FastAPI (Company Server)", "success");
-      printLine("8000/tcp open  http-alt     TRAPWIRE Application Server", "success");
+      printLine("8080/tcp open  http-alt     TRAPWIRE Application Server", "success");
       printLine("9000/tcp open  http-alt     Kali Linux Pentest Console", "error");
       printLine("443/tcp  filt  https        simulated-waf", "dim");
       printLine("");
