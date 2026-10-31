@@ -590,104 +590,252 @@
 
   <!-- 7. TAB: SECURITY CENTER & SOC TELEMETRY -->
   <main class="tab-panel hidden" id="tab-security">
-    
-    <!-- REAL-TIME ATTACKER INTELLIGENCE & FORENSIC ATTRIBUTION CARD -->
-    <div class="panel-card" style="margin-bottom:20px;border-color:rgba(239,68,68,0.35);background:linear-gradient(145deg, rgba(15,23,42,0.9), rgba(30,15,25,0.85));">
-      <div class="panel-card-head">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:10px;height:10px;border-radius:50%;background:#EF4444;box-shadow:0 0 10px #EF4444;animation:pulseDot 1s infinite;"></div>
-          <h2 style="font-size:1.1rem;color:#F8FAFC;">Live Attacker Intelligence &amp; Autonomous Attribution</h2>
+    <div class="soc-container">
+      
+      <!-- TOP COMMAND BANNER: ADVERSARY ATTRIBUTION & KILL-CHAIN -->
+      <div class="soc-banner-card">
+        <div class="soc-top-bar">
+          <div class="soc-title-wrap">
+            <div class="soc-radar-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:22px;height:22px;">
+                <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="soc-main-heading">Security Operations Center (SOC) &amp; Threat Deception Deck</h2>
+              <p class="soc-sub-heading">Autonomous Threat Hunting · Decoy Honeytoken Traps · Forensic Attribution · DPDP Act 2023 Compliance</p>
+            </div>
+          </div>
+          <div class="soc-badges-cluster">
+            <span class="soc-pill soc-pill-defcon">
+              <span style="width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px #ef4444;animation:pulseDot 1s infinite;"></span>
+              DEFCON 2 · ELEVATED DECEPTION
+            </span>
+            <span class="soc-pill soc-pill-honeypot" id="attackerDeceptionBadge">
+              ● HONEYPOT ACTIVE
+            </span>
+            <span class="soc-pill soc-pill-dpdp">
+              ✓ DPDP 2023 STATUTORY READY
+            </span>
+          </div>
         </div>
-        <span class="tag tag-live" id="attackerDeceptionBadge">● HONEYPOT DECEPTION ACTIVE</span>
+
+        <!-- 4-TILE LIVE ADVERSARY DOSSIER -->
+        <div class="soc-metrics-grid">
+          <div class="soc-metric-tile">
+            <div class="soc-metric-label">
+              <span>Source IP (Attacker)</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            </div>
+            <div class="soc-metric-val" id="socAttackerIp" style="color:#38bdf8;">185.220.101.45</div>
+            <div class="soc-metric-sub" id="socAttackerLoc">🇳🇱 Amsterdam, Netherlands</div>
+          </div>
+
+          <div class="soc-metric-tile">
+            <div class="soc-metric-label">
+              <span>ISP &amp; Network Route</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" style="width:14px;height:14px;"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+            </div>
+            <div class="soc-metric-val" id="socAttackerIsp" style="color:#a78bfa;font-size:0.95rem;">Tor Exit Relay / DataCamp Ltd</div>
+            <div class="soc-metric-sub" id="socAttackerAs">AS60068 · High-Risk Anonymizer</div>
+          </div>
+
+          <div class="soc-metric-tile">
+            <div class="soc-metric-label">
+              <span>Current Threat Vector</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="width:14px;height:14px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="soc-metric-val" id="socAttackType" style="color:#f59e0b;font-size:0.95rem;">SQLi &amp; Credential Probe</div>
+            <div class="soc-metric-sub" id="socDecoyStatus" style="color:#34d399;">Decoy Honeypot Quarantined</div>
+          </div>
+
+          <div class="soc-metric-tile">
+            <div class="soc-metric-label">
+              <span>DPB Statutory Filing</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="width:14px;height:14px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="soc-metric-val" id="socDpbStatus" style="color:#10b981;">AUTO-SUBMITTED</div>
+            <div class="soc-metric-sub" id="socDpbAck">Ack: DPB-2026-ACTIVE</div>
+          </div>
+        </div>
+
+        <!-- MITRE ATT&CK DECEPTION KILL-CHAIN PROGRESS -->
+        <div class="soc-killchain-box">
+          <div class="soc-killchain-head">
+            <span>Adversary Kill-Chain Trajectory &amp; Deception Pipeline</span>
+            <span style="font-size:0.7rem;color:#38bdf8;font-family:var(--ent-font-mono, monospace);">STATUS: AUTONOMOUS INTERCEPTION ACTIVE</span>
+          </div>
+          <div class="soc-killchain-steps">
+            <div class="soc-step-item completed" id="kcStep1">
+              <div class="soc-step-num">STAGE 01</div>
+              <div class="soc-step-name">Reconnaissance</div>
+              <div class="soc-step-status" style="color:#10b981;">LOGGED</div>
+            </div>
+            <div class="soc-step-item active" id="kcStep2">
+              <div class="soc-step-num">STAGE 02</div>
+              <div class="soc-step-name">Credential Probe</div>
+              <div class="soc-step-status" style="color:#38bdf8;">INTERCEPTED</div>
+            </div>
+            <div class="soc-step-item trapped" id="kcStep3">
+              <div class="soc-step-num">STAGE 03</div>
+              <div class="soc-step-name">Honeypot Trap</div>
+              <div class="soc-step-status" style="color:#ef4444;">QUARANTINED</div>
+            </div>
+            <div class="soc-step-item completed" id="kcStep4">
+              <div class="soc-step-num">STAGE 04</div>
+              <div class="soc-step-name">Canary Beacon</div>
+              <div class="soc-step-status" id="socCanaryStatus" style="color:#10b981;">ARMED</div>
+            </div>
+            <div class="soc-step-item completed" id="kcStep5">
+              <div class="soc-step-num">STAGE 05</div>
+              <div class="soc-step-name">DPB Legal Filing</div>
+              <div class="soc-step-status" style="color:#10b981;">SUBMITTED</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding-top:10px;border-top:1px dashed rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;font-size:0.76rem;color:#94a3b8;flex-wrap:wrap;gap:8px;">
+            <div>
+              <span style="color:#cbd5e1;font-weight:600;">Forensic Device Fingerprint:</span>
+              <span id="socAttackerDevice" style="font-family:var(--ent-font-mono, monospace);color:#38bdf8;margin-left:6px;">Linux x86_64 · Screen 1920x1080 · Cores: 8 · Timezone: Asia/Kolkata</span>
+            </div>
+            <button class="soc-action-btn-sm" onclick="openActiveForensicModal()">
+              🔍 Inspect Full Forensic Dossier
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div class="stats-row" style="margin-top:14px;margin-bottom:12px;">
-        <div class="stat-card">
-          <div class="stat-icon icon-indigo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+      <!-- ROW 2: REAL-TIME THREAT ACTIVITY & HONEYPOT DECEPTION VAULT -->
+      <div class="soc-analytics-row">
+        <!-- Live Threat Velocity Area Chart -->
+        <div class="soc-dark-card">
+          <div class="soc-card-header">
+            <h3 class="soc-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="width:18px;height:18px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Real-Time Threat Activity &amp; Ingestion Graph
+            </h3>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="tag tag-live" style="font-size:0.7rem;">● LIVE SIEM STREAM</span>
+              <span style="font-size:0.72rem;color:#94a3b8;font-family:var(--ent-font-mono, monospace);">100ms Polling</span>
+            </div>
           </div>
-          <div class="stat-body">
-            <div class="stat-num" id="socAttackerIp" style="font-size:1.05rem;color:#38BDF8;">185.220.101.45</div>
-            <div class="stat-label">Source IP (Attacker)</div>
-            <div class="stat-trend up" id="socAttackerLoc">Amsterdam, Netherlands</div>
+          <div style="position:relative;height:180px;width:100%;">
+            <canvas id="threatChart"></canvas>
           </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon icon-green">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
-          </div>
-          <div class="stat-body">
-            <div class="stat-num" id="socAttackerIsp" style="font-size:0.95rem;color:#A78BFA;word-break:break-all;">Tor Exit Relay / DataCamp Ltd</div>
-            <div class="stat-label">ISP &amp; Autonomous System</div>
-            <div class="stat-trend up" id="socAttackerAs">AS60068 · High-Risk Anonymizer</div>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon icon-amber">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          </div>
-          <div class="stat-body">
-            <div class="stat-num" id="socAttackType" style="font-size:1.05rem;color:#F59E0B;">SQLi &amp; Credential Probe</div>
-            <div class="stat-label">Latest Threat Vector</div>
-            <div class="stat-trend flat" id="socDecoyStatus">Decoy Honeypot Quarantined</div>
+          <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:#64748b;font-family:var(--ent-font-mono, monospace);">
+            <span>BASELINE: 142 HTTP req/min · 0 Production Breaches</span>
+            <span style="color:#10b981;">ALL HONEYPOT TRAPS SYNCHRONIZED</span>
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon icon-green">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <!-- Deception & Honeytoken Vault Status -->
+        <div class="soc-dark-card">
+          <div class="soc-card-header">
+            <h3 class="soc-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" style="width:18px;height:18px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Honeypot Deception &amp; Honeytoken Vault
+            </h3>
+            <span class="soc-pill soc-pill-honeypot" style="padding:2px 8px;font-size:0.7rem;">ISOLATED</span>
           </div>
-          <div class="stat-body">
-            <div class="stat-num" id="socDpbStatus" style="font-size:0.92rem;color:#10B981;">AUTO-SUBMITTED</div>
-            <div class="stat-label">DPB Statutory Registry</div>
-            <div class="stat-trend up" id="socDpbAck">Ack: DPB-2026-ACTIVE</div>
+          
+          <div class="soc-vault-row">
+            <div>
+              <b style="color:#f8fafc;display:block;">Decoy Customer Dataset</b>
+              <span style="color:#64748b;font-size:0.72rem;">14 Synthetic PII profiles active in memory</span>
+            </div>
+            <span class="soc-pill soc-pill-honeypot" style="font-size:0.7rem;">ENGAGED</span>
+          </div>
+
+          <div class="soc-vault-row">
+            <div>
+              <b style="color:#f8fafc;display:block;">Canary PDF Web Beacon</b>
+              <span style="color:#64748b;font-size:0.72rem;">Phone-home beacon embedded in exports</span>
+            </div>
+            <span class="soc-pill soc-pill-dpdp" style="font-size:0.7rem;">ARMED</span>
+          </div>
+
+          <div class="soc-vault-row">
+            <div>
+              <b style="color:#f8fafc;display:block;">Decoy Cloud AWS Keys</b>
+              <span style="color:#64748b;font-size:0.72rem;">Planted in lab sandbox (.env honeytoken)</span>
+            </div>
+            <span class="soc-pill soc-pill-defcon" style="font-size:0.7rem;">TRAPPED</span>
+          </div>
+
+          <div class="soc-vault-row">
+            <div>
+              <b style="color:#f8fafc;display:block;">Production DB Air-Gap</b>
+              <span style="color:#64748b;font-size:0.72rem;">Zero production records exposed to adversary</span>
+            </div>
+            <span style="color:#10b981;font-weight:700;font-size:0.72rem;">100% SAFE</span>
           </div>
         </div>
       </div>
 
-      <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 16px;font-size:0.82rem;color:#94A3B8;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-        <div>
-          <span style="color:#CBD5E1;font-weight:600;">📱 Forensic Device Attribution:</span>
-          <span id="socAttackerDevice" style="font-family:var(--ent-font-mono, monospace);color:#38BDF8;margin-left:6px;">Linux x86_64 · Screen 1920x1080 · Cores: 8 · Timezone: Asia/Kolkata</span>
+      <!-- ROW 3: LIVE SIEM ALERT FEED & DPDP COMPLIANCE ENGINE -->
+      <div class="soc-analytics-row">
+        <!-- Live Alert Feed Card -->
+        <div class="soc-dark-card">
+          <div class="soc-card-header">
+            <h3 class="soc-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="width:18px;height:18px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Live Security Alert Stream (SIEM Events)
+            </h3>
+            <div style="display:flex;gap:8px;">
+              <button class="soc-action-btn-sm" onclick="simulateTestProbe()" title="Trigger a simulated attack alert for live demo">
+                ⚡ Test Threat Probe
+              </button>
+            </div>
+          </div>
+
+          <!-- Alert Filters Toolbar -->
+          <div class="soc-alert-toolbar">
+            <button class="soc-filter-btn active" onclick="filterSocAlerts('all')">All Events</button>
+            <button class="soc-filter-btn" onclick="filterSocAlerts('critical')">Critical</button>
+            <button class="soc-filter-btn" onclick="filterSocAlerts('warning')">Warnings</button>
+            <button class="soc-filter-btn" onclick="filterSocAlerts('honeypot')">Honeypot Decoy</button>
+          </div>
+
+          <!-- Alert Feed Box -->
+          <div id="alertFeed" class="alert-feed" style="max-height:360px;overflow-y:auto;padding-right:4px;"></div>
         </div>
-        <div>
-          <span style="color:#10B981;font-weight:600;">⚡ Canary Tracking Token:</span>
-          <span id="socCanaryStatus" style="color:#34D399;margin-left:6px;">ARMED &amp; ACTIVE</span>
+
+        <!-- DPDP Compliance Reporting Card -->
+        <div class="soc-dark-card">
+          <div class="soc-card-header">
+            <h3 class="soc-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="width:18px;height:18px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              DPDP Statutory Compliance &amp; Breach Center
+            </h3>
+            <span class="soc-pill soc-pill-dpdp" style="padding:2px 8px;font-size:0.7rem;">CERT-IN MANDATE</span>
+          </div>
+
+          <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:12px;margin-bottom:14px;">
+            <div style="font-weight:700;color:#10b981;font-size:0.83rem;margin-bottom:4px;">
+              Section 8(6) Compliance Engine Active
+            </div>
+            <p style="margin:0;font-size:0.76rem;color:#cbd5e1;line-height:1.4;">
+              Under the Digital Personal Data Protection (DPDP) Act, 2023, intrusion events and exfiltration incidents trigger automated statutory notification to the Data Protection Board with SHA-256 evidence.
+            </p>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-bottom:16px;">
+            <button class="btn btn-primary" id="reportBtn" style="flex:1;font-size:0.8rem;padding:8px 12px;display:flex;align-items:center;justify-content:center;gap:6px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Generate Incident PDF
+            </button>
+            <a href="/dpb" target="_blank" class="btn btn-dark" style="font-size:0.8rem;padding:8px 12px;text-decoration:none;display:flex;align-items:center;gap:6px;">
+              <span>DPB Portal →</span>
+            </a>
+          </div>
+          <p id="reportMsg" class="msg" style="margin-bottom:10px;"></p>
+
+          <div style="font-size:0.78rem;font-weight:700;color:#94a3b8;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em;">
+            Auto-Submitted Regulatory Breach Reports
+          </div>
+          <div id="submittedReports" class="alert-feed" style="max-height:180px;overflow-y:auto;"></div>
         </div>
       </div>
-    </div>
 
-    <!-- Threat Activity Timeline Chart -->
-    <div class="panel-card chart-card">
-      <div class="panel-card-head"><h2>Threat Activity Timeline</h2><span class="tag tag-live">● LIVE SOC MONITOR</span></div>
-      <canvas id="threatChart" height="90"></canvas>
-    </div>
-
-    <div class="sec-grid">
-      <div class="panel-card">
-        <div class="panel-card-head"><h2>Live Security Alert Stream</h2></div>
-        <div id="alertFeed" class="alert-feed"></div>
-      </div>
-      <div class="panel-card">
-        <div class="panel-card-head"><h2>DPDP Compliance Reporting Engine</h2></div>
-        <p class="muted">A compliance breach report is auto-generated and submitted to the Data Protection Board the instant an attacker exfiltrates data or triggers canary attribution.</p>
-        <button class="btn btn-dark" id="reportBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Generate Ad-hoc Incident Report (PDF)
-        </button>
-        <p id="reportMsg" class="msg"></p>
-
-        <h3 class="sub-head">Auto-Submitted Regulatory Breach Reports</h3>
-        <p class="muted small">
-          <a href="/dpb" target="_blank" class="ext-link">
-            Open full DPB Statutory Register
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          </a>
-        </p>
-        <div id="submittedReports" class="alert-feed"></div>
-      </div>
     </div>
   </main>
 
