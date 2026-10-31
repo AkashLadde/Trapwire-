@@ -8,33 +8,6 @@
 </head>
 <body class="app-shell">
 
-<!-- EMERGENCY SECURITY ALERT POPUP BANNER -->
-<div class="emergency-alert-banner hidden" id="emergencySecurityAlert">
-  <div class="emergency-alert-left">
-    <div class="emergency-icon-box">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;">
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-        <line x1="12" y1="9" x2="12" y2="13"/>
-        <line x1="12" y1="17" x2="12.01" y2="17"/>
-      </svg>
-    </div>
-    <div class="emergency-alert-content">
-      <h4 id="emergencyAlertTitle">🚨 CRITICAL INTRUSION DETECTED</h4>
-      <p id="emergencyAlertMsg">Intrusion attempt detected from IP 127.0.0.1. Honeypot deception engaged and incident quarantined.</p>
-    </div>
-  </div>
-  <div class="emergency-alert-actions">
-    <button class="emergency-btn-view" id="emergencyViewBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
-      View in Security Center
-    </button>
-    <button class="emergency-btn-dismiss" onclick="dismissEmergencyAlert()">Dismiss</button>
-  </div>
-</div>
-
-<!-- FLOATING REAL-TIME THREAT POPUP TOAST STACK -->
-<div class="threat-toast-stack" id="liveToastStack"></div>
-
 <!-- SIDEBAR NAVIGATION -->
 <aside class="sidebar" id="appSidebar">
   <div class="side-brand">
@@ -1119,6 +1092,33 @@
   </div>
 </div>
 {% endif %}
+
+<!-- EMERGENCY SECURITY ALERT POPUP BANNER (Fixed Overlay) -->
+<div class="emergency-alert-banner hidden" id="emergencySecurityAlert">
+  <div class="emergency-alert-left">
+    <div class="emergency-icon-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+    <div class="emergency-alert-content">
+      <h4 id="emergencyAlertTitle">🚨 CRITICAL INTRUSION DETECTED</h4>
+      <p id="emergencyAlertMsg">Intrusion attempt detected from IP 127.0.0.1. Honeypot deception engaged and incident quarantined.</p>
+    </div>
+  </div>
+  <div class="emergency-alert-actions">
+    <button class="emergency-btn-view" id="emergencyViewBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+      View in Security Center
+    </button>
+    <button class="emergency-btn-dismiss" onclick="dismissEmergencyAlert()">Dismiss</button>
+  </div>
+</div>
+
+<!-- FLOATING REAL-TIME THREAT POPUP TOAST STACK (Fixed Overlay) -->
+<div class="threat-toast-stack" id="liveToastStack"></div>
 
 <script>
 (function() {

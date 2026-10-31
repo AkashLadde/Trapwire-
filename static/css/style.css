@@ -555,7 +555,7 @@ svg { display: block; }
 
 /* ============ EMERGENCY SECURITY ALERT POPUP BANNER ============ */
 .emergency-alert-banner {
-  position: fixed;
+  position: fixed !important;
   top: 16px;
   left: 50%;
   transform: translateX(-50%);
@@ -565,7 +565,7 @@ svg { display: block; }
   box-shadow: 0 10px 35px rgba(239, 68, 68, 0.35), 0 0 0 1px rgba(239, 68, 68, 0.2);
   border-radius: 10px;
   padding: 14px 18px;
-  z-index: 9999;
+  z-index: 10001;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1151,107 +1151,8 @@ svg { display: block; }
 }
 
 /* ==========================================================================
-   EMERGENCY ALERT BANNER & REAL-TIME THREAT TOAST POPUP SYSTEM
+   FLOATING REAL-TIME THREAT TOAST POPUP SYSTEM
    ========================================================================== */
-
-.emergency-alert-banner {
-  position: sticky;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  background: linear-gradient(90deg, #991B1B 0%, #B91C1C 40%, #7F1D1D 100%);
-  color: #ffffff;
-  padding: 12px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  box-shadow: 0 4px 20px rgba(185, 28, 28, 0.4);
-  border-bottom: 2px solid #EF4444;
-  animation: bannerSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.emergency-alert-banner.hidden {
-  display: none !important;
-}
-
-.emergency-alert-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex: 1;
-}
-
-.emergency-icon-box {
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #FEE2E2;
-  flex-shrink: 0;
-  animation: pulseIcon 1.5s infinite;
-}
-
-.emergency-alert-content h4 {
-  margin: 0 0 2px;
-  font-size: 0.92rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #FFFFFF;
-}
-
-.emergency-alert-content p {
-  margin: 0;
-  font-size: 0.8rem;
-  color: #FEE2E2;
-  line-height: 1.35;
-}
-
-.emergency-alert-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.emergency-btn-view {
-  background: #FFFFFF;
-  color: #991B1B;
-  border: none;
-  font-weight: 600;
-  font-size: 0.78rem;
-  padding: 7px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.15s;
-}
-
-.emergency-btn-view:hover {
-  background: #FEE2E2;
-  transform: translateY(-1px);
-}
-
-.emergency-btn-dismiss {
-  background: rgba(0, 0, 0, 0.25);
-  color: #FFFFFF;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  font-size: 0.75rem;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.emergency-btn-dismiss:hover {
-  background: rgba(0, 0, 0, 0.4);
-}
 
 /* Floating Real-Time Threat Toast Stack */
 .threat-toast-stack {

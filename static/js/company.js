@@ -139,6 +139,12 @@ function showEmergencyAlert(a) {
   const msgEl = document.getElementById("emergencyAlertMsg");
   if (!banner || !titleEl || !msgEl) return;
 
+  // Don't show redundant banner if user is already watching the Security Center & SOC
+  const securityTab = document.getElementById("tab-security");
+  if (securityTab && !securityTab.classList.contains("hidden")) {
+    return;
+  }
+
   if (a.level === "critical") {
     titleEl.textContent = "🚨 CRITICAL BREACH & EXFILTRATION DETECTED";
   } else if (a.meta && a.meta.type === "failed_login") {
@@ -153,7 +159,7 @@ function showEmergencyAlert(a) {
   if (emergencyDismissTimeout) clearTimeout(emergencyDismissTimeout);
   emergencyDismissTimeout = setTimeout(() => {
     banner.classList.add("hidden");
-  }, 12000);
+  }, 10000);
 }
 
 function dismissEmergencyAlert() {
