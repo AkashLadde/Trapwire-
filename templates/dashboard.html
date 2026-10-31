@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrapWire — Enterprise SOC &amp; Defender Console</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="app-shell">
+
+<!-- EMERGENCY SECURITY ALERT POPUP BANNER -->
+<div class="emergency-alert-banner hidden" id="emergencySecurityAlert">
+  <div class="emergency-alert-left">
+    <div class="emergency-icon-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+    <div class="emergency-alert-content">
+      <h4 id="emergencyAlertTitle">🚨 CRITICAL INTRUSION DETECTED</h4>
+      <p id="emergencyAlertMsg">Intrusion attempt detected from IP 127.0.0.1. Honeypot deception engaged &amp; SMS dispatched to {{ admin_phone|default('+91 99016 25399') }}.</p>
+    </div>
+  </div>
+  <div class="emergency-alert-actions">
+    <button class="emergency-btn-view" id="emergencyViewBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+      View in Security Center
+    </button>
+    <button class="emergency-btn-dismiss" onclick="dismissEmergencyAlert()">Dismiss</button>
+  </div>
+</div>
+
+<!-- FLOATING REAL-TIME THREAT POPUP TOAST STACK -->
+<div class="threat-toast-stack" id="liveToastStack"></div>
+
+<!-- SIDEBAR NAVIGATION -->
+<aside class="sidebar" id="appSidebar">
+  <div class="side-brand">
+    <div class="side-mark">T</div>
+    <div>TrapWire<span>Admin SOC Console</span></div>
+  </div>
+
+  <div class="side-section-label">Workspace</div>
+  <nav class="side-nav">
+    <button class="side-link active" data-tab="orders">
+      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h16v20l-3-2-3 2-3-2-3 2-3-2-1 2V2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/></svg>
+      Orders &amp; Customers
+    </button>
+  </nav>
+
+  {% if not suspicious %}
+  <div class="side-section-label">Business Operations</div>
+  <nav class="side-nav">
+    <button class="side-link" data-tab="projects">
+      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Projects &amp; Projections
+    </button>
+  </nav>
+
+  <div class="side-section-label">Management &amp; Governance</div>
+  <nav class="side-nav">
+    <button class="side-link" data-tab="administration">
+      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Administration &amp; Team
+    </button>
+    <button class="side-link" data-tab="library">
+      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Document Library
+    </button>
+    <button class="side-link" data-tab="maps">
+      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Global Locations &amp; Maps
+    </button>
+    <button class="side-link" data-tab="support">
+      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Support &amp; Help Center
+    </button>
+  </nav>
+
+  <div class="side-section-label">SOC &amp; Hardware Defense</div>
+  <nav class="side-nav">
+    <button class="side-link" data-tab="security">
+      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+      Security Center &amp; SOC
+      <span class="side-dot" id="alertDot"></span>
+    </button>
+    <button class="side-link" data-tab="hardware">
+      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+      Hardware Nodes &amp; IoT
+    </button>
+  </nav>
+  {% endif %}
+
+  <div class="side-foot">
+    <div class="side-user">
+      <div class="avatar">{{ username[0]|upper }}</div>
+      <span>{{ username }}</span>
+    </div>
+    <a class="side-logout" href="/api/logout">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign out
+    </a>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT AREA -->
+<div class="app-main">
+  <!-- Organization Utility Strip -->
+  <div class="org-strip">
+    <div class="org-strip-left">
+      <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" title="Toggle Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span>TrapWire Pvt Ltd</span>
+      <span class="org-strip-sep">·</span>
+      <span class="env-pill">DEFENDER PRODUCTION</span>
+      <span class="org-strip-sep">·</span>
+      <span class="env-pill" style="background:rgba(16,185,129,0.15);color:#34D399;">SMS RELAY: {{ admin_phone|default('+91 99016 25399') }}</span>
+    </div>
+    <div class="org-strip-right">
+      <span class="region">IN-Mumbai · DPDP Engine</span>
+      <span class="org-strip-sep">·</span>
+      <span class="status-live-pill"><i></i>All systems operational</span>
+    </div>
+  </div>
+
+  <!-- Topbar -->
+  <header class="app-topbar">
+    <div class="crumb">Defender Console <span>/</span> <b id="crumbTab">Orders &amp; Customers</b></div>
+
+    <div class="topbar-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="globalSearch" placeholder="Search orders, customers, PII records…">
+    </div>
+
+    <div class="topbar-actions">
+      {% if not suspicious %}
+      <button class="icon-btn" id="notifBellBtn" title="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="notif-badge" id="notifBadge">0</span>
+      </button>
+      <div class="dropdown-menu notif-panel hidden" id="notifPanel">
+        <div class="dropdown-head">
+          <span class="dd-name">Security Telemetry Alerts</span>
+          <a href="#" class="ext-link small" id="notifViewAll" style="font-size:0.72rem;">View in SOC</a>
+        </div>
+        <div class="notif-list" id="notifList">
+          <div class="notif-empty">No intrusion alerts recorded.</div>
+        </div>
+      </div>
+      {% endif %}
+
+      <button class="profile-chip" id="profileChipBtn">
+        <div class="avatar">{{ username[0]|upper }}</div>
+        <span class="profile-chip-name">{{ username }}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="dropdown-menu hidden" id="profileMenu">
+        <div class="dropdown-head">
+          <div class="dd-name">{{ username }}</div>
+          <div class="dd-role">Security Administrator · TrapWire Pvt Ltd</div>
+        </div>
+        <a class="dropdown-item" href="/dpb" target="_blank">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+          DPB Statutory Register
+        </a>
+        <a class="dropdown-item" href="/api/logout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- 1. TAB: ORDERS & CUSTOMERS -->
+  <main class="tab-panel" id="tab-orders">
+    <div class="welcome-strip">
+      <h2 class="welcome-heading" id="welcomeHeading">Welcome back, {{ username }}</h2>
+      <p class="muted">Customer data minimization &amp; PII protection active under DPDP Act, 2023.</p>
+    </div>
+    {% set delivered_count = records|selectattr("status","equalto","Delivered")|list|length %}
+    {% set fulfillment_rate = ((delivered_count / records|length) * 100)|round(1) if records|length > 0 else 0 %}
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon icon-indigo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-num">{{ records|length }}</div>
+          <div class="stat-label">Total Customer Orders</div>
+          <div class="stat-trend up">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            Live production database
+          </div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="4" x2="18" y2="4"/><line x1="6" y1="8" x2="18" y2="8"/><path d="M6 4c5 0 8 1.8 8 5.5S12.5 13 8 13H6l8 8"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-num">₹{{ "{:,}".format(records|sum(attribute='order_value')) }}</div>
+          <div class="stat-label">Total Order Value</div>
+          <div class="stat-trend up">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            Fiscal Q2 Protected
+          </div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-num">{{ fulfillment_rate }}%</div>
+          <div class="stat-label">Fulfillment Rate</div>
+          <div class="stat-trend flat">{{ delivered_count }} of {{ records|length }} delivered</div>
+        </div>
+      </div>
+      <div class="stat-card stat-action">
+        <button class="btn btn-primary full" id="exportBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Customer Data
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-card-head">
+        <h2>Recent Customer Orders</h2>
+        {% if not suspicious %}<span class="tag tag-safe">DPDP Masking Active</span>{% else %}<span class="tag tag-live">Decoy Honeypot Active</span>{% endif %}
+      </div>
+
+      <div class="table-toolbar">
+        <div class="table-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="tableSearch" placeholder="Filter by customer or order ID…">
+        </div>
+        <div class="filter-chips" id="statusChips">
+          <button class="filter-chip active" data-status="all">All</button>
+          <button class="filter-chip" data-status="Delivered">Delivered</button>
+          <button class="filter-chip" data-status="Shipped">Shipped</button>
+          <button class="filter-chip" data-status="Processing">Processing</button>
+          <button class="filter-chip" data-status="Pending">Pending</button>
+        </div>
+        <span class="table-count" id="tableCount">{{ records|length }} records</span>
+      </div>
+
+      <div class="table-scroll">
+      <table class="data-table" id="ordersTable">
+        <thead>
+          <tr>
+            <th>Order ID</th><th>Customer</th><th>Phone</th><th>Email</th>
+            <th>Aadhaar</th><th>PAN</th><th>Card</th><th>Address</th><th>Item</th>
+            <th>Status</th><th class="sortable" id="sortValue">Value <span class="sort-ico">⇅</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+          <tr data-status="{{ r.status }}" data-search="{{ r.customer_name|lower }} {{ r.order_id|lower }}" data-value="{{ r.order_value }}">
+            <td class="mono">{{ r.order_id }}</td>
+            <td>
+              <div class="cust-cell">
+                <span class="cust-avatar">{{ r.customer_name[0]|upper }}</span>
+                {{ r.customer_name }}
+              </div>
+            </td>
+            <td class="mono">{{ r.phone_display }}</td>
+            <td>{{ r.email_display }}</td>
+            <td class="mono">{{ r.aadhaar_display }}</td>
+            <td class="mono">{{ r.pan_display }}</td>
+            <td class="mono">{{ r.card_display }}</td>
+            <td>{{ r.address }}</td>
+            <td>{{ r.item }}</td>
+            <td><span class="status-pill status-{{ r.status|lower }}">{{ r.status }}</span></td>
+            <td class="mono">₹{{ "{:,}".format(r.order_value) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <p class="muted small foot-note" id="noResultsMsg" style="display:none;">No orders match your filters.</p>
+      {% if not suspicious %}
+      <p class="muted small foot-note">PII fields are masked by default per Digital Personal Data Protection (DPDP) Act, 2023 data-minimization guidelines.</p>
+      {% endif %}
+    </div>
+  </main>
+
+  {% if not suspicious %}
+  <!-- 2. TAB: PROJECTS & PROJECTIONS -->
+  <main class="tab-panel hidden" id="tab-projects">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon icon-indigo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-num" id="statActiveProjects">7</div>
+          <div class="stat-label">Active Enterprise Projects</div>
+          <div class="stat-trend up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>2 added this quarter</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-num" id="statBillableHours">1,284 hrs</div>
+          <div class="stat-label">Engineering Billable Hours</div>
+          <div class="stat-trend flat">₹186 avg. rate / hr</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-num" id="statCompletion">86%</div>
+          <div class="stat-label">On-Time Delivery SLA</div>
+          <div class="stat-trend up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>vs 81% last quarter</div>
+        </div>
+      </div>
+      <div class="stat-card stat-action">
+        <button class="btn btn-primary full" id="newProjectBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Project
+        </button>
+      </div>
+    </div>
+
+    <div class="proj-grid">
+      <div class="panel-card chart-card">
+        <div class="panel-card-head"><h2>Financial &amp; Revenue Projections</h2><span class="tag tag-safe">FY 2026–27</span></div>
+        <canvas id="financeChart" height="130"></canvas>
+      </div>
+      <div class="panel-card">
+        <div class="panel-card-head"><h2>Project Notifications</h2><span class="tag" style="background:var(--ent-blue-tint);color:var(--ent-blue);" id="projNotifCount">4 new</span></div>
+        <div class="notif-feed" id="projectNotifFeed">
+          <div class="notif-row">
+            <span class="notif-dot dot-indigo"></span>
+            <div><b>Milestone approved</b><p>Client sign-off received for "Retail POS Revamp" phase 2.</p><span class="notif-when">2 hours ago</span></div>
+          </div>
+          <div class="notif-row">
+            <span class="notif-dot dot-amber"></span>
+            <div><b>Budget threshold</b><p>"Warehouse Automation" has used 78% of allocated budget.</p><span class="notif-when">Yesterday</span></div>
+          </div>
+          <div class="notif-row">
+            <span class="notif-dot dot-green"></span>
+            <div><b>Timesheet submitted</b><p>14 team members logged hours for this week.</p><span class="notif-when">Yesterday</span></div>
+          </div>
+          <div class="notif-row">
+            <span class="notif-dot dot-red"></span>
+            <div><b>Deadline at risk</b><p>"Mobile App Revamp v2" is 5 days behind schedule.</p><span class="notif-when">2 days ago</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-card" style="margin-top:18px;">
+      <div class="panel-card-head">
+        <h2>Project Overview</h2>
+        <span class="table-count" id="projTableCount">6 projects</span>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table" id="projectsTable">
+          <thead>
+            <tr><th>Project</th><th>Client</th><th>Owner</th><th>Deadline</th><th>Budget</th><th>Progress</th><th>Status</th></tr>
+          </thead>
+          <tbody id="projectsTableBody">
+            <tr>
+              <td><b>Retail POS Revamp</b></td><td>TrapWire Retail</td>
+              <td><div class="cust-cell"><span class="cust-avatar">A</span>Aditi Rao</div></td>
+              <td class="mono">15 Oct 2026</td><td class="mono">₹18,50,000</td>
+              <td><div class="progress-track"><div class="progress-fill" style="width:72%;"></div></div></td>
+              <td><span class="status-pill status-shipped">On Track</span></td>
+            </tr>
+            <tr>
+              <td><b>Warehouse Automation</b></td><td>TrapWire Logistics</td>
+              <td><div class="cust-cell"><span class="cust-avatar">K</span>Karan Mehta</div></td>
+              <td class="mono">30 Nov 2026</td><td class="mono">₹42,00,000</td>
+              <td><div class="progress-track"><div class="progress-fill fill-amber" style="width:58%;"></div></div></td>
+              <td><span class="status-pill status-processing">At Risk</span></td>
+            </tr>
+            <tr>
+              <td><b>Mobile App Revamp v2</b></td><td>Internal</td>
+              <td><div class="cust-cell"><span class="cust-avatar">S</span>Sana Iqbal</div></td>
+              <td class="mono">05 Oct 2026</td><td class="mono">₹9,75,000</td>
+              <td><div class="progress-track"><div class="progress-fill fill-red" style="width:41%;"></div></div></td>
+              <td><span class="status-pill status-pending">Delayed</span></td>
+            </tr>
+            <tr>
+              <td><b>Customer Loyalty Engine</b></td><td>TrapWire Retail</td>
+              <td><div class="cust-cell"><span class="cust-avatar">R</span>Rahul Nair</div></td>
+              <td class="mono">20 Dec 2026</td><td class="mono">₹26,40,000</td>
+              <td><div class="progress-track"><div class="progress-fill" style="width:33%;"></div></div></td>
+              <td><span class="status-pill status-shipped">On Track</span></td>
+            </tr>
+            <tr>
+              <td><b>Vendor Onboarding Portal</b></td><td>TrapWire B2B</td>
+              <td><div class="cust-cell"><span class="cust-avatar">P</span>Priya Das</div></td>
+              <td class="mono">12 Sep 2026</td><td class="mono">₹14,20,000</td>
+              <td><div class="progress-track"><div class="progress-fill" style="width:95%;"></div></div></td>
+              <td><span class="status-pill status-delivered">Nearly Done</span></td>
+            </tr>
+            <tr>
+              <td><b>DPDP Compliance Audit</b></td><td>Internal</td>
+              <td><div class="cust-cell"><span class="cust-avatar">V</span>Vikram Shah</div></td>
+              <td class="mono">28 Sep 2026</td><td class="mono">₹6,80,000</td>
+              <td><div class="progress-track"><div class="progress-fill" style="width:64%;"></div></div></td>
+              <td><span class="status-pill status-shipped">On Track</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- 3. TAB: ADMINISTRATION & TEAM -->
+  <main class="tab-panel hidden" id="tab-administration">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon icon-indigo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="stat-body"><div class="stat-num" id="statTotalUsers">18</div><div class="stat-label">SOC Team Members</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg></div>
+        <div class="stat-body"><div class="stat-num">15</div><div class="stat-label">Active Sessions Today</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+        <div class="stat-body"><div class="stat-num">4</div><div class="stat-label">Configured SOC Roles</div></div>
+      </div>
+      <div class="stat-card stat-action">
+        <button class="btn btn-primary full" id="inviteUserBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+          Invite User
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-card-head"><h2>SOC Team Members &amp; Access Controls</h2><span class="table-count" id="adminTableCount">6 users</span></div>
+      <div class="table-scroll">
+        <table class="data-table" id="adminUsersTable">
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th></tr></thead>
+          <tbody id="adminUsersTableBody">
+            <tr><td><div class="cust-cell"><span class="cust-avatar">A</span>Aditi Rao</div></td><td class="mono">aditi.rao@trapwire.co.in</td><td>Security Lead</td><td><span class="status-pill status-delivered">Active</span></td><td class="mono">Today, 9:14 AM</td></tr>
+            <tr><td><div class="cust-cell"><span class="cust-avatar">K</span>Karan Mehta</div></td><td class="mono">karan.mehta@trapwire.co.in</td><td>Manager</td><td><span class="status-pill status-delivered">Active</span></td><td class="mono">Today, 8:02 AM</td></tr>
+            <tr><td><div class="cust-cell"><span class="cust-avatar">S</span>Sana Iqbal</div></td><td class="mono">sana.iqbal@trapwire.co.in</td><td>SOC Analyst</td><td><span class="status-pill status-delivered">Active</span></td><td class="mono">Yesterday, 6:45 PM</td></tr>
+            <tr><td><div class="cust-cell"><span class="cust-avatar">R</span>Rahul Nair</div></td><td class="mono">rahul.nair@trapwire.co.in</td><td>Viewer</td><td><span class="status-pill status-processing">Invited</span></td><td class="mono">—</td></tr>
+            <tr><td><div class="cust-cell"><span class="cust-avatar">P</span>Priya Das</div></td><td class="mono">priya.das@trapwire.co.in</td><td>Compliance Officer</td><td><span class="status-pill status-delivered">Active</span></td><td class="mono">2 days ago</td></tr>
+            <tr><td><div class="cust-cell"><span class="cust-avatar">V</span>Vikram Shah</div></td><td class="mono">vikram.shah@trapwire.co.in</td><td>Analyst</td><td><span class="status-pill status-pending">Suspended</span></td><td class="mono">12 days ago</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="proj-grid" style="margin-top:18px;">
+      <div class="panel-card">
+        <div class="panel-card-head"><h2>Roles &amp; Permissions Matrix</h2></div>
+        <div class="role-list">
+          <div class="role-row"><span class="role-badge role-admin">Administrator</span><span class="muted small">Full access — users, billing, security settings</span><span class="mono small">1 member</span></div>
+          <div class="role-row"><span class="role-badge role-manager">Manager</span><span class="muted small">Manage projects, view financials, invite viewers</span><span class="mono small">2 members</span></div>
+          <div class="role-row"><span class="role-badge role-analyst">Analyst</span><span class="muted small">Read/write on assigned projects only</span><span class="mono small">2 members</span></div>
+          <div class="role-row"><span class="role-badge role-viewer">Viewer</span><span class="muted small">Read-only dashboard access</span><span class="mono small">1 member</span></div>
+        </div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-card-head"><h2>System Security &amp; Audit Toggles</h2></div>
+        <div class="toggle-row"><div><b>Enforce 2FA for all admins</b><p class="muted small">Require an authenticator app at login.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+        <div class="toggle-row"><div><b>Auto session timeout</b><p class="muted small">Sign out idle sessions after 30 minutes.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+        <div class="toggle-row"><div><b>Real-Time Out-of-Band SMS Alerts</b><p class="muted small">Dispatch SMS to {{ admin_phone|default('+91 99016 25399') }} on threat triggers.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+        <div class="toggle-row"><div><b>Audit logging</b><p class="muted small">Record every admin action for compliance review.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 4. TAB: DOCUMENT LIBRARY -->
+  <main class="tab-panel hidden" id="tab-library">
+    <div class="panel-card-head" style="margin-bottom:16px;">
+      <h2 style="font-size:1.1rem;">Governance &amp; Document Library</h2>
+      <div class="table-search" style="max-width:260px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="libSearch" placeholder="Search documents…">
+      </div>
+    </div>
+    <div class="filter-chips" id="libChips" style="margin-bottom:16px;">
+      <button class="filter-chip active" data-cat="all">All Documents</button>
+      <button class="filter-chip" data-cat="Policy">Policies</button>
+      <button class="filter-chip" data-cat="Template">Templates</button>
+      <button class="filter-chip" data-cat="Report">Reports</button>
+      <button class="filter-chip" data-cat="Training">Training Modules</button>
+    </div>
+    <div class="doc-grid" id="docGrid">
+      <!-- Injected by workspace.js -->
+    </div>
+  </main>
+
+  <!-- 5. TAB: GLOBAL MAPS -->
+  <main class="tab-panel hidden" id="tab-maps">
+    <div class="panel-card-head" style="margin-bottom:16px;">
+      <h2 style="font-size:1.1rem;">Global Presence &amp; Regional Operations</h2>
+      <span class="tag tag-safe">2 Primary Hubs</span>
+    </div>
+    <div class="map-grid">
+      <div class="map-card">
+        <div class="map-card-head"><span class="map-badge map-badge-hq">Main Headquarters</span><h3>TrapWire Pvt Ltd — Singapore</h3></div>
+        <iframe class="map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+          src="https://www.google.com/maps?q=Marina+Bay+Financial+Centre+Singapore&z=15&output=embed"></iframe>
+        <div class="map-card-body">
+          <p><svg class="map-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Marina Bay Financial Centre, 8 Marina Blvd, Singapore 018981</p>
+          <p><svg class="map-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> SGT (UTC+8) · Mon–Fri, 9:00 AM – 6:00 PM SGT</p>
+        </div>
+      </div>
+      <div class="map-card">
+        <div class="map-card-head"><span class="map-badge map-badge-branch">Technology Development Hub</span><h3>TrapWire Pvt Ltd — Bidar</h3></div>
+        <iframe class="map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+          src="https://www.google.com/maps?q=Bidar+Karnataka+India&z=13&output=embed"></iframe>
+        <div class="map-card-body">
+          <p><svg class="map-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> IT Park Road, Bidar, Karnataka 585401, India</p>
+          <p><svg class="map-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> IST (UTC+5:30) · Mon–Fri, 9:30 AM – 6:30 PM IST</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 6. TAB: SUPPORT & HELP -->
+  <main class="tab-panel hidden" id="tab-support">
+    <div class="support-grid">
+      <div class="panel-card support-contact-card">
+        <div class="support-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+        <div><div class="stat-label">24/7 Helpline</div><div class="support-value">+91 74836 55370</div></div>
+      </div>
+      <div class="panel-card support-contact-card">
+        <div class="support-icon icon-indigo-solid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg></div>
+        <div><div class="stat-label">Email Support</div><div class="support-value">support@trapwire.co.in</div></div>
+      </div>
+      <div class="panel-card support-contact-card">
+        <div class="support-icon icon-green-solid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div><div class="stat-label">Support Hours</div><div class="support-value">Mon–Sat, 9 AM – 9 PM IST</div></div>
+      </div>
+    </div>
+
+    <div class="proj-grid" style="margin-top:18px;">
+      <div class="panel-card">
+        <div class="panel-card-head"><h2>Raise a Support &amp; Incident Ticket</h2></div>
+        <form id="supportForm">
+          <label>Subject</label>
+          <input type="text" id="supSubject" required placeholder="Briefly describe the issue or anomaly">
+          <label>Category</label>
+          <select id="supCategory">
+            <option>Security / Deception Anomaly</option>
+            <option>Technical Issue</option>
+            <option>DPDP Compliance Inquiry</option>
+            <option>Hardware Node Setup</option>
+            <option>Other</option>
+          </select>
+          <label>Message</label>
+          <textarea id="supMessage" rows="4" required placeholder="Provide technical details…"></textarea>
+          <button class="btn btn-primary" type="submit" style="margin-top:14px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Submit Ticket
+          </button>
+          <p id="supportMsg" class="msg"></p>
+        </form>
+      </div>
+      <div class="panel-card">
+        <div class="panel-card-head"><h2>Frequently Asked Questions</h2></div>
+        <div class="faq-list" id="faqList">
+          <div class="faq-item">
+            <button class="faq-q">How is customer PII protected in this console? <span>+</span></button>
+            <div class="faq-a">All Aadhaar, PAN, phone, email and card fields are masked by default in every view, following DPDP Act, 2023 data-minimization guidance.</div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-q">What happens when an attacker attempts brute-force login? <span>+</span></button>
+            <div class="faq-a">After 3 failed attempts, the session is isolated to decoy honeypot tables, an immediate SMS is dispatched to +91 99016 25399, and a live alert banner displays in this console.</div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-q">How does the hardware integration work? <span>+</span></button>
+            <div class="faq-a">TrapWire integrates with Raspberry Pi edge honeypot nodes, ESP32 physical strobe sirens/buzzers via Serial/Wi-Fi, and SIM800L GSM modules for out-of-band alerting.</div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-q">Where can I view auto-submitted statutory reports? <span>+</span></button>
+            <div class="faq-a">Open the Security Center tab or click the DPB Statutory Register link to view acknowledged regulatory compliance submissions.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 7. TAB: SECURITY CENTER & SOC TELEMETRY -->
+  <main class="tab-panel hidden" id="tab-security">
+    
+    <!-- REAL-TIME ATTACKER INTELLIGENCE & FORENSIC ATTRIBUTION CARD -->
+    <div class="panel-card" style="margin-bottom:20px;border-color:rgba(239,68,68,0.35);background:linear-gradient(145deg, rgba(15,23,42,0.9), rgba(30,15,25,0.85));">
+      <div class="panel-card-head">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:#EF4444;box-shadow:0 0 10px #EF4444;animation:pulseDot 1s infinite;"></div>
+          <h2 style="font-size:1.1rem;color:#F8FAFC;">Live Attacker Intelligence &amp; Autonomous Attribution</h2>
+        </div>
+        <span class="tag tag-live" id="attackerDeceptionBadge">● HONEYPOT DECEPTION ACTIVE</span>
+      </div>
+
+      <div class="stats-row" style="margin-top:14px;margin-bottom:12px;">
+        <div class="stat-card">
+          <div class="stat-icon icon-indigo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-num" id="socAttackerIp" style="font-size:1.05rem;color:#38BDF8;">185.220.101.45</div>
+            <div class="stat-label">Source IP (Attacker)</div>
+            <div class="stat-trend up" id="socAttackerLoc">Amsterdam, Netherlands</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-num" id="socAttackerIsp" style="font-size:0.95rem;color:#A78BFA;word-break:break-all;">Tor Exit Relay / DataCamp Ltd</div>
+            <div class="stat-label">ISP &amp; Autonomous System</div>
+            <div class="stat-trend up" id="socAttackerAs">AS60068 · High-Risk Anonymizer</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-amber">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-num" id="socAttackType" style="font-size:1.05rem;color:#F59E0B;">SQLi &amp; Credential Probe</div>
+            <div class="stat-label">Latest Threat Vector</div>
+            <div class="stat-trend flat" id="socDecoyStatus">Decoy Honeypot Quarantined</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon icon-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-num" id="socDpbStatus" style="font-size:0.92rem;color:#10B981;">AUTO-SUBMITTED</div>
+            <div class="stat-label">DPB Statutory Registry</div>
+            <div class="stat-trend up" id="socDpbAck">Ack: DPB-2026-ACTIVE</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 16px;font-size:0.82rem;color:#94A3B8;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div>
+          <span style="color:#CBD5E1;font-weight:600;">📱 Forensic Device Attribution:</span>
+          <span id="socAttackerDevice" style="font-family:var(--ent-font-mono, monospace);color:#38BDF8;margin-left:6px;">Linux x86_64 · Screen 1920x1080 · Cores: 8 · Timezone: Asia/Kolkata</span>
+        </div>
+        <div>
+          <span style="color:#10B981;font-weight:600;">⚡ Canary Tracking Token:</span>
+          <span id="socCanaryStatus" style="color:#34D399;margin-left:6px;">ARMED &amp; ACTIVE</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Threat Activity Timeline Chart -->
+    <div class="panel-card chart-card">
+      <div class="panel-card-head"><h2>Threat Activity Timeline</h2><span class="tag tag-live">● LIVE SOC MONITOR</span></div>
+      <canvas id="threatChart" height="90"></canvas>
+    </div>
+
+    <div class="sec-grid">
+      <div class="panel-card">
+        <div class="panel-card-head"><h2>Live Security Alert Stream</h2></div>
+        <div id="alertFeed" class="alert-feed"></div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-card-head"><h2>DPDP Compliance Reporting Engine</h2></div>
+        <p class="muted">A compliance breach report is auto-generated and submitted to the Data Protection Board the instant an attacker exfiltrates data or triggers canary attribution.</p>
+        <button class="btn btn-dark" id="reportBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Generate Ad-hoc Incident Report (PDF)
+        </button>
+        <p id="reportMsg" class="msg"></p>
+
+        <h3 class="sub-head">Auto-Submitted Regulatory Breach Reports</h3>
+        <p class="muted small">
+          <a href="/dpb" target="_blank" class="ext-link">
+            Open full DPB Statutory Register
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        </p>
+        <div id="submittedReports" class="alert-feed"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 8. TAB: HARDWARE SETUP & SENSOR MONITOR -->
+  <main class="tab-panel hidden" id="tab-hardware">
+    <div class="panel-card-head" style="margin-bottom:16px;">
+      <h2 style="font-size:1.15rem;">Physical Hardware Threat Nodes &amp; IoT Setup</h2>
+      <button class="btn btn-primary" onclick="triggerHardwareTest()" id="hwTestBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Trigger Diagnostic Alarm &amp; Test SMS
+      </button>
+    </div>
+
+    <!-- Hardware Nodes Grid -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon icon-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-num" style="font-size:1rem;color:#10B981;">Raspberry Pi 4</div>
+          <div class="stat-label">Edge Honeypot Node (DMZ)</div>
+          <div class="stat-trend up">IP 192.168.1.150 · ARMED</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon icon-amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-num" style="font-size:1rem;color:#F59E0B;">ESP32 Strobe Alarm</div>
+          <div class="stat-label">Physical Siren &amp; OLED Matrix</div>
+          <div class="stat-trend flat">COM3 / 115200 baud · ACTIVE</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon icon-indigo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-num" style="font-size:1rem;color:#38BDF8;">SIM800L 4G Modem</div>
+          <div class="stat-label">Out-of-Band SMS Module</div>
+          <div class="stat-trend up">+91 99016 25399 · 94% Signal</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon icon-indigo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-num" style="font-size:1rem;color:#A855F7;">Dual-NIC Network Tap</div>
+          <div class="stat-label">DPI Packet Sniffer</div>
+          <div class="stat-trend up">Promiscuous Mode · 0 Drops</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hardware Architecture Schematic -->
+    <div class="panel-card" style="margin-top:18px;">
+      <div class="panel-card-head">
+        <h2>Hardware Deployment Architecture Guide</h2>
+        <span class="tag tag-safe">Recommended Capstone Setup</span>
+      </div>
+      
+      <div class="doc-reader-body" style="padding:0;color:#CBD5E1;font-size:0.88rem;line-height:1.6;">
+        <p>This hardware deployment topology ensures physical isolation between attacker-facing honeypots and internal enterprise assets:</p>
+        
+        <table class="doc-table">
+          <thead>
+            <tr>
+              <th>Hardware Component</th>
+              <th>Recommended Model</th>
+              <th>Interface / Connection</th>
+              <th>Role &amp; Function</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Honeypot Edge Node</b></td>
+              <td>Raspberry Pi 4 / 5 (4GB RAM)</td>
+              <td>Dedicated DMZ Subnet / eth1</td>
+              <td>Runs the Attacker-facing TrapWire container on isolated port 9000.</td>
+            </tr>
+            <tr>
+              <td><b>Physical Threat Strobe</b></td>
+              <td>ESP32 DevKit + 12V Red Strobe / Relay</td>
+              <td>USB-UART (COM3 / /dev/ttyUSB0)</td>
+              <td>Flashes physical warning sirens and sounds a buzzer when an attacker triggers decoys.</td>
+            </tr>
+            <tr>
+              <td><b>OLED Threat Display</b></td>
+              <td>0.96" SSD1306 I2C OLED Display</td>
+              <td>ESP32 Pins D21 (SDA) / D22 (SCL)</td>
+              <td>Displays real-time threat metrics: <code>🚨 BREACH: IP 185.220... | REPORT: DPB ACK</code></td>
+            </tr>
+            <tr>
+              <td><b>GSM SMS Modem</b></td>
+              <td>SIM800L / Waveshare SIM7600 4G</td>
+              <td>UART GPIO 14/15 or USB</td>
+              <td>Sends hardware SMS dispatches to <b>+91 99016 25399</b> even without internet!</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="doc-callout" style="margin-top:16px;">
+          <b>🔌 Quick Arduino/ESP32 Setup:</b> Connect ESP32 to server via USB. Flash the supplied C++ sketch in <code>hardware/esp32_threat_siren.ino</code> to receive automated breach triggers over serial at 115200 baud.
+        </div>
+      </div>
+    </div>
+  </main>
+  {% endif %}
+</div>
+
+{% if not suspicious %}
+<!-- MODALS -->
+<div class="modal-overlay hidden" id="newProjectModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Create New Project</h3><button class="modal-close" id="closeProjectModal">&times;</button></div>
+    <form id="newProjectForm">
+      <label>Project name</label>
+      <input type="text" id="npName" required placeholder="e.g. Loyalty App Redesign">
+      <label>Client</label>
+      <input type="text" id="npClient" required placeholder="e.g. TrapWire Retail">
+      <label>Owner</label>
+      <input type="text" id="npOwner" required placeholder="e.g. Aditi Rao">
+      <label>Deadline</label>
+      <input type="date" id="npDeadline" required>
+      <label>Budget (₹)</label>
+      <input type="number" id="npBudget" required min="0" placeholder="e.g. 1200000">
+      <button class="btn btn-primary full" type="submit" style="margin-top:16px;">Create Project</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="inviteUserModal">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Invite Team Member</h3><button class="modal-close" id="closeInviteModal">&times;</button></div>
+    <form id="inviteUserForm">
+      <label>Full name</label>
+      <input type="text" id="iuName" required placeholder="e.g. Neha Kulkarni">
+      <label>Work email</label>
+      <input type="email" id="iuEmail" required placeholder="name@trapwire.co.in">
+      <label>Role</label>
+      <select id="iuRole">
+        <option>Viewer</option>
+        <option>SOC Analyst</option>
+        <option>Manager</option>
+        <option>Security Lead</option>
+        <option>Administrator</option>
+      </select>
+      <button class="btn btn-primary full" type="submit" style="margin-top:16px;">Send Invite</button>
+    </form>
+  </div>
+</div>
+<div class="toast hidden" id="workspaceToast"></div>
+
+<!-- INTERACTIVE DOCUMENT READER MODAL -->
+<div class="doc-reader-modal hidden" id="docReaderModal">
+  <div class="doc-reader-box">
+    <div class="doc-reader-header">
+      <div class="doc-reader-header-left">
+        <span class="doc-badge-pill policy" id="docReaderBadge">POLICY</span>
+        <div>
+          <h3 class="doc-reader-title" id="docReaderHeading">Data Protection &amp; Privacy Policy</h3>
+          <div class="doc-reader-meta" id="docReaderMeta">DPDP Act, 2023 Compliance Framework · 5 min read</div>
+        </div>
+      </div>
+      <button class="doc-reader-close-btn" onclick="closeDocReader()">&times;</button>
+    </div>
+    <div class="doc-reader-body" id="docReaderBody">
+      <!-- Rich interactive article content injected by workspace.js -->
+    </div>
+    <div class="doc-reader-footer">
+      <span style="font-size:0.8rem;color:#64748B;">TrapWire Pvt Ltd · Governance &amp; Compliance Portal</span>
+      <button class="doc-reader-footer-btn" onclick="showToast('Document downloaded (Simulated PDF export).')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Document (PDF)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- FLOATING SOC MOBILE LIVE TOGGLE BUTTON -->
+<button class="phone-toggle-btn" id="phoneToggleBtn" onclick="toggleAdminPhone()">
+  <div class="phone-badge-pulse" id="phoneBadgePulse"></div>
+  <span>📱 SOC Mobile Live (+91 99016 25399)</span>
+</button>
+
+<!-- SIMULATED ADMIN SMARTPHONE OVERLAY -->
+<div class="phone-simulator-overlay hidden" id="adminPhoneWidget">
+  <div class="phone-notch">
+    <div class="phone-speaker-bar"></div>
+    <div class="phone-camera-dot"></div>
+  </div>
+  <div class="phone-screen">
+    <div class="phone-status-bar">
+      <span id="phoneClock">09:41</span>
+      <span>5G · 100% 🔋</span>
+    </div>
+    
+    <!-- Live Push Banner -->
+    <div class="phone-push-banner" id="phonePushBanner" style="display:none;">
+      <div class="push-head">
+        <span>🚨 TRAPWIRE SOC DEFENDER</span>
+        <span id="pushTime">Just now</span>
+      </div>
+      <div class="push-body" id="pushBodyText">
+        Intrusion alert detected on Admin Portal from IP 127.0.0.1.
+      </div>
+    </div>
+
+    <!-- SMS Stream -->
+    <div style="font-size:11px;font-weight:700;color:#94A3B8;margin:6px 0 4px;display:flex;justify-content:space-between;align-items:center;">
+      <span>MESSAGES (DISPATCH LOG)</span>
+      <span style="font-size:10px;color:#38BDF8;">● +91 99016 25399</span>
+    </div>
+    <div class="phone-sms-history" id="phoneSmsList">
+      <div class="sms-bubble">
+        <div><b>TrapWire SOC Bot:</b> System security monitor initialized. Ready for DPDP telemetry dispatches.</div>
+        <div class="sms-time">Today, 09:00 AM</div>
+      </div>
+    </div>
+
+<!-- FORENSIC INCIDENT INSPECTOR MODAL -->
+<div class="modal-overlay hidden" id="forensicModal" style="z-index:10000;">
+  <div class="modal-box" style="max-width:680px;background:#0d1527;border:1px solid rgba(239,68,68,0.4);box-shadow:0 25px 70px rgba(0,0,0,0.8), 0 0 40px rgba(239,68,68,0.25);">
+    <div class="modal-head" style="border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="badge-dot" style="background:#EF4444;box-shadow:0 0 8px #EF4444;width:8px;height:8px;border-radius:50%;"></span>
+        <h3 style="color:#FFFFFF;margin:0;font-size:1.15rem;" id="forensicModalTitle">🚨 Attacker Forensic Dossier &amp; Incident Telemetry</h3>
+      </div>
+      <button class="modal-close" onclick="closeForensicModal()" style="color:#94A3B8;font-size:1.4rem;background:none;border:none;cursor:pointer;">&times;</button>
+    </div>
+    
+    <div style="padding:16px 0;display:flex;flex-direction:column;gap:16px;font-size:0.85rem;color:#CBD5E1;">
+      
+      <!-- Attacker Network Attribution -->
+      <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:14px;">
+        <div style="font-weight:700;color:#38BDF8;margin-bottom:10px;display:flex;justify-content:space-between;">
+          <span>📡 ATTACKER NETWORK ATTRIBUTION</span>
+          <span id="fmThreatLevel" class="status-pill status-cancelled">CRITICAL THREAT</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-family:var(--ent-font-mono, monospace);">
+          <div><span style="color:#64748B;">Connecting IP:</span> <b id="fmIp" style="color:#FFFFFF;">185.220.101.45</b></div>
+          <div><span style="color:#64748B;">Network ISP:</span> <b id="fmIsp" style="color:#A78BFA;">Tor Exit Relay / DataCamp Ltd</b></div>
+          <div><span style="color:#64748B;">Geo-Location:</span> <b id="fmLoc" style="color:#FFFFFF;">Amsterdam, Netherlands</b></div>
+          <div><span style="color:#64748B;">Time Observed:</span> <b id="fmTime" style="color:#FFFFFF;">Just now</b></div>
+        </div>
+      </div>
+
+      <!-- Device & Fingerprint Telemetry -->
+      <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:14px;">
+        <div style="font-weight:700;color:#34D399;margin-bottom:10px;">📱 HARDWARE &amp; BROWSER FINGERPRINT</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-family:var(--ent-font-mono, monospace);font-size:0.8rem;">
+          <div><span style="color:#64748B;">Platform OS:</span> <b id="fmOs" style="color:#FFFFFF;">Linux x86_64</b></div>
+          <div><span style="color:#64748B;">Screen Canvas:</span> <b id="fmScreen" style="color:#FFFFFF;">1920 x 1080</b></div>
+          <div><span style="color:#64748B;">CPU Concurrency:</span> <b id="fmCores" style="color:#FFFFFF;">8 Cores</b></div>
+          <div><span style="color:#64748B;">System Timezone:</span> <b id="fmTimezone" style="color:#FFFFFF;">Asia/Kolkata (IST)</b></div>
+        </div>
+      </div>
+
+      <!-- Payload & Threat Vector -->
+      <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:14px;">
+        <div style="font-weight:700;color:#F59E0B;margin-bottom:8px;">💥 THREAT VECTOR &amp; EXPLOIT PAYLOAD</div>
+        <div id="fmPayload" style="background:#060a14;padding:10px;border-radius:6px;font-family:var(--ent-font-mono, monospace);color:#F87171;word-break:break-all;border:1px solid rgba(239,68,68,0.2);">
+          UNION SELECT username, password FROM users --
+        </div>
+      </div>
+
+      <!-- Statutory DPB Compliance Filing -->
+      <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:14px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:700;color:#10B981;margin-bottom:2px;">📄 DATA PROTECTION BOARD (DPB) STATUTORY FILING</div>
+          <div style="font-size:0.78rem;color:#94A3B8;">Auto-filed under DPDP Act, 2023 · Ack: <b id="fmAckId" style="color:#FFFFFF;">DPB-2026-ACTIVE</b></div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <a href="/dpb" target="_blank" id="fmDpbLink" class="btn btn-primary" style="padding:6px 12px;font-size:0.78rem;text-decoration:none;">
+            View DPB Register →
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:12px;">
+      <button class="btn btn-dark" onclick="closeForensicModal()">Close Dossier</button>
+      <button class="btn btn-primary" id="fmDownloadPdfBtn" onclick="downloadForensicPdf()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Official Breach Report (PDF)
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+(function() {
+  const h = document.getElementById("welcomeHeading");
+  if (!h) return;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  h.textContent = greeting + ", {{ username }}";
+})();
+
+function toggleMobileSidebar() {
+  const sidebar = document.getElementById("appSidebar");
+  if (sidebar) sidebar.classList.toggle("mobile-open");
+}
+
+function triggerHardwareTest() {
+  const btn = document.getElementById("hwTestBtn");
+  if (btn) btn.disabled = true;
+  fetch("/api/hardware/trigger-test", { method: "POST" })
+    .then(r => r.json())
+    .then(data => {
+      showToast("Hardware alarm triggered! SMS dispatched to +91 99016 25399.");
+      if (btn) btn.disabled = false;
+    })
+    .catch(err => {
+      showToast("Error triggering hardware test: " + err.message);
+      if (btn) btn.disabled = false;
+    });
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script id="recordsData" type="application/json">{{ records|tojson }}</script>
+<script src="/static/js/company.js"></script>
+<script>window.SUSPICIOUS = {{ 'true' if suspicious else 'false' }};</script>
+{% if not suspicious %}
+<script src="/static/js/workspace.js"></script>
+{% endif %}
+</body>
+</html>

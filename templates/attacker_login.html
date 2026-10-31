@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRAPWIRE — OffSec Pentest Operator Login</title>
+  <link rel="stylesheet" href="/static/css/attacker.css">
+  <style>
+    /* ==========================================================================
+       DEDICATED ATTACKER LOGIN PAGE STYLING
+       ========================================================================== */
+    .atk-login-body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #050204;
+      font-family: var(--atk-font-mono, 'JetBrains Mono', monospace);
+      position: relative;
+      overflow-x: hidden;
+      padding: 24px;
+      margin: 0;
+    }
+
+    .matrix-bg-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.35;
+    }
+
+    .atk-login-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 1060px;
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      background: rgba(13, 6, 10, 0.92);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 20px;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8), 0 0 45px rgba(255, 0, 59, 0.18);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      overflow: hidden;
+    }
+
+    /* Left Hero / Intel Side */
+    .atk-hero-side {
+      padding: 48px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: linear-gradient(145deg, rgba(20, 8, 14, 0.96), rgba(8, 3, 6, 0.98));
+      border-right: 1px solid rgba(239, 68, 68, 0.18);
+      position: relative;
+    }
+
+    .atk-hero-side::before {
+      content: "";
+      position: absolute;
+      top: -80px;
+      left: -80px;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 0, 59, 0.22), transparent 70%);
+      pointer-events: none;
+    }
+
+    .atk-brand-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .atk-brand-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(255, 0, 59, 0.15);
+      border: 1px solid rgba(255, 0, 59, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px rgba(255, 0, 59, 0.35);
+      overflow: hidden;
+    }
+
+    .atk-brand-logo img {
+      width: 32px;
+      height: 32px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+
+    .atk-brand-text h3 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: #FFFFFF;
+      text-transform: uppercase;
+    }
+
+    .atk-brand-text span {
+      font-size: 0.72rem;
+      color: #FF003B;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .atk-hero-headline {
+      font-size: 1.85rem;
+      font-weight: 800;
+      line-height: 1.25;
+      color: #FFFFFF;
+      margin: 0 0 16px;
+      background: linear-gradient(135deg, #FFFFFF, #FCA5A5, #EF4444);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .atk-hero-desc {
+      font-size: 0.88rem;
+      color: #94A3B8;
+      line-height: 1.6;
+      margin: 0 0 28px;
+      font-family: var(--atk-font-sans, 'Inter', sans-serif);
+    }
+
+    .atk-spec-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .atk-spec-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.82rem;
+      color: #CBD5E1;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 10px 14px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .atk-spec-item:hover {
+      border-color: rgba(239, 68, 68, 0.35);
+      background: rgba(239, 68, 68, 0.06);
+    }
+
+    .atk-spec-item svg {
+      width: 16px;
+      height: 16px;
+      color: #EF4444;
+      flex-shrink: 0;
+    }
+
+    .atk-target-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px dashed rgba(239, 68, 68, 0.4);
+      border-radius: 8px;
+      font-size: 0.78rem;
+      color: #CBD5E1;
+    }
+
+    .atk-target-banner .pulse-dot-red {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #EF4444;
+      box-shadow: 0 0 8px #EF4444;
+      animation: pulseDot 1.5s infinite;
+    }
+
+    /* Right Form Side */
+    .atk-form-side {
+      padding: 48px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: rgba(10, 4, 8, 0.9);
+    }
+
+    .atk-form-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin: 0 0 6px;
+      letter-spacing: -0.01em;
+    }
+
+    .atk-form-subtitle {
+      font-size: 0.84rem;
+      color: #64748B;
+      margin: 0 0 24px;
+      font-family: var(--atk-font-sans, 'Inter', sans-serif);
+    }
+
+    /* Boot Progress Track */
+    .atk-boot-track {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 20px;
+      font-size: 0.74rem;
+      color: #94A3B8;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .atk-boot-bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .atk-boot-bar-fill {
+      height: 100%;
+      width: 35%;
+      background: linear-gradient(90deg, #EF4444, #F59E0B);
+      box-shadow: 0 0 8px #EF4444;
+      transition: width 0.4s ease;
+    }
+
+    .atk-input-group {
+      margin-bottom: 18px;
+    }
+
+    .atk-input-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #CBD5E1;
+      margin-bottom: 6px;
+    }
+
+    .atk-input-group label span {
+      color: #64748B;
+      font-weight: 400;
+    }
+
+    .atk-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .atk-input-prefix {
+      position: absolute;
+      left: 14px;
+      font-size: 0.8rem;
+      color: #EF4444;
+      font-weight: 700;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .atk-input {
+      width: 100%;
+      padding: 12px 14px 12px 110px;
+      background: rgba(5, 2, 4, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      color: #FFFFFF;
+      font-size: 0.92rem;
+      font-family: var(--atk-font-mono, monospace);
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .atk-input.password-input {
+      padding-left: 42px;
+      padding-right: 42px;
+    }
+
+    .atk-input-prefix-icon {
+      position: absolute;
+      left: 14px;
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    .atk-input:focus {
+      border-color: #EF4444;
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.3);
+      background: #0d0407;
+    }
+
+    .toggle-pass-btn {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      color: #64748B;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+
+    .toggle-pass-btn:hover {
+      color: #CBD5E1;
+    }
+
+    /* Error Box */
+    .atk-error-banner {
+      display: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #FCA5A5;
+      font-size: 0.8rem;
+      margin-bottom: 16px;
+      align-items: center;
+      gap: 10px;
+      animation: errorShake 0.4s ease;
+    }
+
+    @keyframes errorShake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+
+    /* Submit Button */
+    .atk-btn-submit {
+      width: 100%;
+      padding: 13px 20px;
+      background: linear-gradient(135deg, #B91C1C, #DC2626);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      border-radius: 8px;
+      color: #FFFFFF;
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      font-family: var(--atk-font-mono, monospace);
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 18px rgba(220, 38, 38, 0.45);
+      transition: all 0.2s;
+      margin-bottom: 20px;
+    }
+
+    .atk-btn-submit:hover {
+      background: linear-gradient(135deg, #DC2626, #EF4444);
+      box-shadow: 0 6px 25px rgba(239, 68, 68, 0.65);
+      transform: translateY(-2px);
+    }
+
+    .atk-btn-submit:active {
+      transform: translateY(0);
+    }
+
+    /* Quick Credential Chips */
+    .atk-quick-title {
+      font-size: 0.74rem;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .atk-quick-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .atk-quick-chip {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: #94A3B8;
+      font-size: 0.74rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .atk-quick-chip:hover {
+      border-color: rgba(239, 68, 68, 0.4);
+      background: rgba(239, 68, 68, 0.08);
+      color: #CBD5E1;
+    }
+
+    .atk-quick-chip b {
+      color: #EF4444;
+      font-size: 0.76rem;
+    }
+
+    .atk-footer-links {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.76rem;
+      color: #64748B;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 16px;
+    }
+
+    .atk-footer-links a {
+      color: #38BDF8;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .atk-footer-links a:hover {
+      color: #93C5FD;
+      text-decoration: underline;
+    }
+
+    @media (max-width: 900px) {
+      .atk-login-container {
+        grid-template-columns: 1fr;
+      }
+      .atk-hero-side {
+        padding: 36px 28px;
+      }
+      .atk-form-side {
+        padding: 36px 28px;
+      }
+    }
+  </style>
+</head>
+<body class="atk-login-body">
+
+  <!-- Background Matrix Canvas -->
+  <canvas id="matrixCanvas" class="matrix-bg-canvas"></canvas>
+
+  <!-- Audio Sound Synthesizer -->
+  <audio id="sfxAudio" preload="auto"></audio>
+
+  <div class="atk-login-container">
+    
+    <!-- LEFT SIDE: INTEL & SYSTEM OVERVIEW -->
+    <div class="atk-hero-side">
+      <div>
+        <div class="atk-brand-header">
+          <div class="atk-brand-logo">
+            <img src="/static/img/spiderweb_terminal_bg.png" alt="OffSec Emblem">
+          </div>
+          <div class="atk-brand-text">
+            <h3>TRAPWIRE</h3>
+            <span>OffSec Workstation HUD • v2026.4</span>
+          </div>
+        </div>
+
+        <h1 class="atk-hero-headline">Red-Team Pentest Console</h1>
+        <p class="atk-hero-desc">Quarantined adversarial simulation suite equipped with automated credential stuffing, SQL injection exploit runner, multi-hop VPN hopping, and decoy honeypot exfiltration monitors.</p>
+
+        <div class="atk-spec-list">
+          <div class="atk-spec-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            <span>Live Terminal CLI &amp; Interactive Attack Wordlists</span>
+          </div>
+          <div class="atk-spec-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+            </svg>
+            <span>Automated SQLi Exploit &amp; DPDP Breach Filing Trigger</span>
+          </div>
+          <div class="atk-spec-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+              <line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>
+            </svg>
+            <span>Decoy Honeypot Exfiltration &amp; Canary Phone-Home Tracker</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="atk-target-banner">
+        <span class="pulse-dot-red"></span>
+        <span>Target Gateway: <b id="targetGatewayText">{{ target_api_base|default('http://127.0.0.1:8080') }}</b></span>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDE: OPERATOR AUTHENTICATION FORM -->
+    <div class="atk-form-side">
+      <div class="atk-form-title">Operator Login</div>
+      <div class="atk-form-subtitle">Authenticate to unlock the Kali offensive HUD workspace</div>
+
+      <!-- Boot Status Bar -->
+      <div class="atk-boot-track">
+        <div id="bootStatusText">SYS_AUTH: Awaiting Operator Credential Input...</div>
+        <div class="atk-boot-bar">
+          <div class="atk-boot-bar-fill" id="bootProgress"></div>
+        </div>
+      </div>
+
+      <!-- Error Banner -->
+      <div class="atk-error-banner" id="errorBanner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="errorMessage">Invalid Operator Passphrase. Intrusion attempt logged to SOC.</span>
+      </div>
+
+      <form id="atkLoginForm" onsubmit="handleOperatorLogin(event)">
+        
+        <!-- Operator ID -->
+        <div class="atk-input-group">
+          <label for="opUsername">
+            <span>Operator Identity</span>
+            <span>[UID 1000]</span>
+          </label>
+          <div class="atk-input-wrapper">
+            <span class="atk-input-prefix">root@kali:~#</span>
+            <input type="text" id="opUsername" class="atk-input" value="root" autocomplete="username" required>
+          </div>
+        </div>
+
+        <!-- Passphrase -->
+        <div class="atk-input-group">
+          <label for="opPassword">
+            <span>Passphrase Key</span>
+            <span>[DEFAULT: toor]</span>
+          </label>
+          <div class="atk-input-wrapper">
+            <span class="atk-input-prefix-icon">🔑</span>
+            <input type="password" id="opPassword" class="atk-input password-input" value="toor" autocomplete="current-password" placeholder="Enter passkey" required>
+            <button type="button" class="toggle-pass-btn" onclick="togglePasswordVisibility()" title="Toggle visibility">
+              <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Credential Selector -->
+        <div class="atk-quick-title">⚡ Preset Operator Credentials</div>
+        <div class="atk-quick-grid">
+          <button type="button" class="atk-quick-chip" onclick="fillCreds('root', 'toor')">
+            <b>root / toor</b>
+            <span>Superuser Access</span>
+          </button>
+          <button type="button" class="atk-quick-chip" onclick="fillCreds('kali', 'kali')">
+            <b>kali / kali</b>
+            <span>Standard Pentester</span>
+          </button>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="atk-btn-submit" id="btnSubmit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          <span id="btnText">Authenticate &amp; Engage Console</span>
+        </button>
+
+      </form>
+
+      <div class="atk-footer-links">
+        <span>Sandboxed OffSec Environment</span>
+        <a href="http://127.0.0.1:8080/" target="_blank" id="socDefenderLink">Switch to Admin Gateway &rarr;</a>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    const TARGET_API_BASE = "{{ target_api_base|default('http://127.0.0.1:8080') }}";
+
+    // Matrix Background Rain Canvas Effect
+    (function initMatrix() {
+      const canvas = document.getElementById("matrixCanvas");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener("resize", resize);
+
+      const chars = "0101010101010101ABCDEF0123456789!@#$%^&*()_+-=[]{}|;:,.<>?~";
+      const fontSize = 13;
+      let columns = Math.floor(canvas.width / fontSize);
+      let drops = Array(columns).fill(1);
+
+      function draw() {
+        ctx.fillStyle = "rgba(5, 2, 4, 0.08)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#FF003B";
+        ctx.font = fontSize + "px 'JetBrains Mono', monospace";
+
+        for (let i = 0; i < drops.length; i++) {
+          const text = chars[Math.floor(Math.random() * chars.length)];
+          ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+          if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+            drops[i] = 0;
+          }
+          drops[i]++;
+        }
+      }
+
+      setInterval(draw, 45);
+    })();
+
+    // Web Audio Synthesizer for High-Tech Sound FX
+    function playBeep(freq = 440, type = "sine", duration = 0.1) {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playSuccessSound() {
+      playBeep(587.33, "triangle", 0.08);
+      setTimeout(() => playBeep(880, "triangle", 0.15), 90);
+    }
+
+    function playAlarmSound() {
+      playBeep(220, "sawtooth", 0.15);
+      setTimeout(() => playBeep(180, "sawtooth", 0.2), 160);
+    }
+
+    function playKeyClickSound() {
+      playBeep(800 + Math.random() * 400, "square", 0.02);
+    }
+
+    // Toggle Password Visibility
+    function togglePasswordVisibility() {
+      const passInput = document.getElementById("opPassword");
+      if (passInput.type === "password") {
+        passInput.type = "text";
+      } else {
+        passInput.type = "password";
+      }
+    }
+
+    // Fill Quick Credentials
+    function fillCreds(u, p) {
+      playKeyClickSound();
+      document.getElementById("opUsername").value = u;
+      document.getElementById("opPassword").value = p;
+      const banner = document.getElementById("errorBanner");
+      banner.style.display = "none";
+    }
+
+    // Notify Company SOC Server via API Event
+    async function notifyCompanyServer(event_name, data = {}) {
+      try {
+        const base = TARGET_API_BASE;
+        await fetch(`${base}/api/attacker-session-event`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: event_name,
+            ...data
+          })
+        });
+      } catch (err) {
+        console.warn("[SOC NOTIFICATION ERROR]", err);
+      }
+    }
+
+    // Handle Operator Login
+    async function handleOperatorLogin(e) {
+      e.preventDefault();
+      const user = (document.getElementById("opUsername").value || "root").trim();
+      const pass = (document.getElementById("opPassword").value || "").trim();
+      const banner = document.getElementById("errorBanner");
+      const errorMsg = document.getElementById("errorMessage");
+      const bootText = document.getElementById("bootStatusText");
+      const bootBar = document.getElementById("bootProgress");
+      const btn = document.getElementById("btnSubmit");
+      const btnText = document.getElementById("btnText");
+
+      banner.style.display = "none";
+      bootText.innerHTML = "AUTH_VERIFY: Inspecting operator hash &amp; security token...";
+      bootBar.style.width = "75%";
+      btn.disabled = true;
+      btnText.textContent = "Authenticating...";
+
+      // Validation check: root/toor, kali/kali, admin/Admin@2026!, etc.
+      const validCreds = (user === "root" && (pass === "toor" || pass === "root")) ||
+                         (user === "kali" && (pass === "kali" || pass === "toor")) ||
+                         (user === "admin" && (pass === "Admin@2026!" || pass === "admin123" || pass === "toor")) ||
+                         (pass === "toor" || pass === "kali");
+
+      if (!validCreds) {
+        playAlarmSound();
+        bootBar.style.width = "100%";
+        bootBar.style.background = "#EF4444";
+        bootText.innerHTML = `<span style="color:#EF4444;font-weight:700;">⛔ AUTHENTICATION REJECTED: Invalid passphrase for '${user}'</span>`;
+        errorMsg.textContent = `Access denied for '${user}'. Intrusion telemetry dispatched to Company SOC.`;
+        banner.style.display = "flex";
+
+        btn.disabled = false;
+        btnText.textContent = "Authenticate & Engage Console";
+
+        // Notify Defender SOC of unauthorized attempt
+        notifyCompanyServer("terminal_login_attempt", {
+          user: user,
+          password_attempt: pass || "[empty]",
+          tool: "Kali Operator Login Portal"
+        });
+        return;
+      }
+
+      // Successful Authentication
+      playSuccessSound();
+      bootBar.style.width = "100%";
+      bootBar.style.background = "linear-gradient(90deg, #10B981, #00E5FF)";
+      bootText.innerHTML = `<span style="color:#10B981;font-weight:700;">✓ OPERATOR AUTHENTICATED: Launching TRAPWIRE Offensive Console...</span>`;
+      btnText.textContent = "Session Granted...";
+
+      sessionStorage.setItem("kali_authenticated", "true");
+      sessionStorage.setItem("kali_user", user);
+
+      // Notify Defender SOC of active attacker session
+      await notifyCompanyServer("terminal_login_success", {
+        user: user,
+        password_attempt: pass,
+        tool: "Kali Pentest Operator Portal"
+      });
+
+      setTimeout(() => {
+        // Redirect to Attacker Console
+        if (window.location.port === "9000") {
+          window.location.href = "/console";
+        } else {
+          window.location.href = "/attacker/console";
+        }
+      }, 700);
+    }
+
+    // Typing SFX on inputs
+    document.addEventListener("keydown", (e) => {
+      if (e.target.tagName === "INPUT") {
+        playKeyClickSound();
+      }
+    });
+
+    // Adapt link if on LAN / dynamic host
+    (function adaptLinks() {
+      const host = window.location.hostname || "127.0.0.1";
+      const socLink = document.getElementById("socDefenderLink");
+      if (socLink && host !== "127.0.0.1") {
+        socLink.href = `http://${host}:8080/`;
+      }
+    })();
+  </script>
+</body>
+</html>

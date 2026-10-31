@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Acknowledgement {{ r.ack_number }} — DPB Portal (Simulated)</title>
+<link rel="stylesheet" href="/static/css/dpb.css">
+</head>
+<body>
+<div class="sim-banner">⚠ EDUCATIONAL SIMULATION — Not an official Government of India website.</div>
+
+<header class="dpb-header">
+  <div class="dpb-seal">DPB</div>
+  <div>
+    <div class="dpb-title">Data Protection Board Portal</div>
+    <div class="dpb-sub">Acknowledgement of Breach Notification</div>
+  </div>
+</header>
+
+<main class="dpb-main">
+  <a class="back-link" href="/dpb">← Back to register</a>
+
+  <div class="cert">
+    <div class="cert-stamp">ACKNOWLEDGED</div>
+    <h1>Acknowledgement Receipt</h1>
+    <p class="cert-sub">This receipt confirms that the breach notification described below has
+      been received and logged by the Board.</p>
+
+    <table class="cert-table">
+      <tr><th>Acknowledgement Number</th><td class="mono">{{ r.ack_number }}</td></tr>
+      <tr><th>Entity (Data Fiduciary)</th><td>{{ r.company_name }}</td></tr>
+      <tr><th>Incident ID</th><td class="mono">{{ r.incident_id }}</td></tr>
+      <tr><th>Report Stage</th><td>{{ r.stage|upper }}</td></tr>
+      <tr><th>Received At</th><td><span class="ts" data-ts="{{ r.received_at }}"></span></td></tr>
+      <tr><th>Reported Source IP</th><td class="mono">{{ r.attacker_ip or "N/A" }}</td></tr>
+      <tr><th>Reported ISP</th><td>{{ r.attacker_isp or "N/A" }}</td></tr>
+      {% if deadline %}
+      <tr><th>72-Hour Reporting Deadline</th><td><span class="ts" data-ts="{{ deadline }}"></span></td></tr>
+      {% endif %}
+      <tr><th>Status</th><td><span class="pill pill-ack">{{ r.status }}</span></td></tr>
+    </table>
+
+    <a class="btn-dpb" href="/dpb/download/{{ r.filename }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;display:inline-block;vertical-align:-2px;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download Submitted Report (PDF)
+    </a>
+  </div>
+</main>
+
+<footer class="dpb-footer">Simulated Register — for demonstration of DPDP Act, 2023 compliance workflows only.</footer>
+
+<script>
+document.querySelectorAll(".ts").forEach(el => {
+  const d = new Date(parseFloat(el.dataset.ts) * 1000);
+  el.textContent = d.toLocaleString();
+});
+</script>
+</body>
+</html>

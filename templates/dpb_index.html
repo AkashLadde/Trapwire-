@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Data Protection Board Portal (Simulated)</title>
+<link rel="stylesheet" href="/static/css/dpb.css">
+</head>
+<body>
+<div class="sim-banner">⚠ EDUCATIONAL SIMULATION — Not an official Government of India website. Built for a college capstone demo only.</div>
+
+<header class="dpb-header">
+  <div class="dpb-seal">DPB</div>
+  <div>
+    <div class="dpb-title">Data Protection Board Portal</div>
+    <div class="dpb-sub">Breach Notification Register — Digital Personal Data Protection Act, 2023 (simulated)</div>
+  </div>
+</header>
+
+<main class="dpb-main">
+  <h1>Breach Notification Register</h1>
+  <p class="dpb-lede">Every entry below represents a data breach notification received from a
+    registered Data Fiduciary. Each submission is issued a unique Acknowledgement Number at
+    the time of receipt.</p>
+
+  {% if submissions %}
+  <table class="reg-table">
+    <thead>
+      <tr>
+        <th>Sl. No.</th>
+        <th>Ack. No.</th>
+        <th>Entity</th>
+        <th>Incident ID</th>
+        <th>Stage</th>
+        <th>Received</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in submissions %}
+      <tr>
+        <td>{{ loop.revindex }}</td>
+        <td><a href="/dpb/submission/{{ s.ack_number }}">{{ s.ack_number }}</a></td>
+        <td>{{ s.company_name }}</td>
+        <td>{{ s.incident_id }}</td>
+        <td><span class="pill pill-{{ s.stage }}">{{ s.stage|upper }}</span></td>
+        <td><span class="ts" data-ts="{{ s.received_at }}"></span></td>
+        <td><span class="pill pill-ack">{{ s.status }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">No breach notifications received yet.</div>
+  {% endif %}
+</main>
+
+<footer class="dpb-footer">Simulated Register — for demonstration of DPDP Act, 2023 compliance workflows only.</footer>
+
+<script>
+document.querySelectorAll(".ts").forEach(el => {
+  const d = new Date(parseFloat(el.dataset.ts) * 1000);
+  el.textContent = d.toLocaleString();
+});
+</script>
+</body>
+</html>

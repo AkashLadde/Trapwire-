@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRAPWIRE — OffSec Pentest Console &amp; Terminal HUD</title>
+  <link rel="stylesheet" href="/static/css/attacker.css">
+</head>
+<body class="attacker-body">
+
+  <!-- AUDIO SOUND FX SYNTHESIZER TOGGLE -->
+  <audio id="sfxAudio" preload="auto"></audio>
+
+  <!-- KALI LINUX HACKER LOGIN & BOOT OVERLAY -->
+  <div class="kali-login-overlay {{ 'hidden' if not show_login else '' }}" id="kaliLoginOverlay">
+    <!-- Matrix Particle Canvas -->
+    <canvas id="kaliMatrixCanvas" class="kali-matrix-canvas"></canvas>
+
+    <div class="kali-login-card">
+      <!-- Glowing Red Spiderweb Emblem -->
+      <div class="kali-spiderweb-badge">
+        <img src="/static/img/spiderweb_terminal_bg.png" alt="Spiderweb HUD" class="emblem-img">
+        <div class="spider-glow-pulse"></div>
+      </div>
+
+      <div class="kali-login-title">
+        <span class="glitch-text" data-text="TRAPWIRE OFFSEC WORKSTATION">TRAPWIRE OFFSEC WORKSTATION</span>
+      </div>
+      <div class="kali-login-sub">Offensive Security Rolling Release • Kernel 6.8.0-kali • Deception Lab</div>
+
+      <!-- Boot Sequence Status Bar -->
+      <div class="kali-boot-progress-wrap" id="bootProgressWrap">
+        <div class="kali-boot-text" id="bootText">SYS_INIT: Initializing Cryptographic Shell &amp; Deception Probes...</div>
+        <div class="kali-boot-track">
+          <div class="kali-boot-fill" id="bootFill"></div>
+        </div>
+      </div>
+
+      <form class="kali-login-form" id="kaliLoginForm" onsubmit="handleKaliLogin(event)">
+        <div class="kali-form-group">
+          <label>Operator ID / Username <span>[UID 1000]</span></label>
+          <div class="input-glow-wrap">
+            <span class="input-prefix">root@kali:~#</span>
+            <input type="text" id="kaliUser" class="kali-input" value="root" autocomplete="username" required>
+          </div>
+        </div>
+        
+        <div class="kali-form-group">
+          <label>Passphrase <span>[DEFAULT: toor / kali]</span></label>
+          <div class="input-glow-wrap">
+            <span class="input-prefix">🔑</span>
+            <input type="password" id="kaliPass" class="kali-input" value="toor" autocomplete="current-password" placeholder="Enter passkey" required>
+          </div>
+        </div>
+
+        <button type="submit" class="kali-btn-submit" id="kaliLoginBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          AUTHENTICATE &amp; ENGAGE CONSOLE
+        </button>
+
+        <div class="kali-quick-actions">
+          <button type="button" class="kali-quick-login" onclick="quickKaliLogin('root', 'toor')">
+            ⚡ Quick Root (root / toor)
+          </button>
+          <button type="button" class="kali-quick-login" onclick="quickKaliLogin('kali', 'kali')">
+            🛡️ Kali User (kali / kali)
+          </button>
+        </div>
+      </form>
+
+      <div class="kali-login-foot">
+        <div class="dot-pulse-red"></div>
+        <span>Target Gateway: <b id="targetFootUrl">{{ target_api_base|default('http://127.0.0.1:8080') }}</b> (TrapWire Admin)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP BAR -->
+  <header class="atk-topbar">
+    <div class="atk-brand">
+      <div class="atk-logo-box">
+        <img src="/static/img/spiderweb_terminal_bg.png" alt="Spiderweb" style="width:20px;height:20px;border-radius:2px;">
+      </div>
+      <div class="atk-title">
+        TRAPWIRE
+        <span class="atk-sub">OFFSEC PENTEST CONSOLE</span>
+      </div>
+      <div class="atk-status-badge">
+        <div class="pulse-dot"></div>
+        <span>SESSION ENCRYPTED</span>
+      </div>
+    </div>
+
+    <div class="atk-top-actions">
+      <div class="atk-badge-group">
+        <div class="atk-meta-pill" id="targetPill">
+          <span>TARGET: <b id="topTargetHost">127.0.0.1:8080</b></span>
+        </div>
+        <div class="atk-meta-pill">
+          <span id="topVpnStatus">VPN: OFF</span>
+        </div>
+        <div class="atk-meta-pill">
+          <span id="topSessionStatus">SESSION: ANONYMOUS</span>
+        </div>
+      </div>
+
+      <!-- Sound FX Toggle -->
+      <button class="atk-btn-sm" id="soundToggleBtn" onclick="toggleSoundFX()" title="Toggle Sound FX">
+        <span id="soundIcon">🔊</span> Audio: <b id="soundStatus">ON</b>
+      </button>
+
+      <button class="atk-btn-sm atk-btn-lock" onclick="lockKaliConsole()" title="Lock Workstation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        Lock
+      </button>
+
+      <button class="atk-btn-sm atk-btn-reset" onclick="handleReset()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+        Reset Sandbox
+      </button>
+
+      <a class="atk-btn-sm atk-btn-exit" href="http://127.0.0.1:8080/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Company Server
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN THREE-COLUMN WORKSPACE -->
+  <main class="atk-workspace">
+    
+    <!-- LEFT PANEL: VIRTUAL FILESYSTEM & RECON PALLET -->
+    <aside class="atk-panel atk-sidebar-left">
+      <div class="atk-panel-header">
+        <div class="panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          Virtual Filesystem
+        </div>
+        <span style="font-size:10px;color:var(--atk-text-dim);">EXT4 / SANDBOX</span>
+      </div>
+
+      <div class="atk-file-explorer">
+        <div class="atk-fs-tree">
+          
+          <!-- shadow_vault -->
+          <div class="fs-group">
+            <div class="fs-dir-title" data-dir="shadow_vault">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              shadow_vault/
+            </div>
+            <div class="fs-file-list">
+              <div class="fs-file-item" data-file="leak_database.enc">
+                <span class="fs-file-name">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  leak_database.enc
+                </span>
+                <span class="fs-file-size">12.4M</span>
+              </div>
+              <div class="fs-file-item" data-file="client_records.enc">
+                <span class="fs-file-name">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  client_records.enc
+                </span>
+                <span class="fs-file-size">4.8M</span>
+              </div>
+              <div class="fs-file-item" data-file="master_keys.bak">
+                <span class="fs-file-name">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  master_keys.bak
+                </span>
+                <span class="fs-file-size">1.2K</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- onion_links -->
+          <div class="fs-group">
+            <div class="fs-dir-title" data-dir="onion_links">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              onion_links/
+            </div>
+            <div class="fs-file-list">
+              <div class="fs-file-item" data-file="hidden_markets.lst">
+                <span class="fs-file-name">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+                  hidden_markets.lst
+                </span>
+                <span class="fs-file-size">840B</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- malware_kits -->
+          <div class="fs-group">
+            <div class="fs-dir-title" data-dir="malware_kits">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              malware_kits/
+            </div>
+            <div class="fs-file-list">
+              <div class="fs-file-item" data-file="payloads.sh">
+                <span class="fs-file-name">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                  payloads.sh
+                </span>
+                <span class="fs-file-size">2.1K</span>
+              </div>
+              <div class="fs-file-item" data-file="ransom_notes.txt">
+                <span class="fs-file-name">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                  ransom_notes.txt
+                </span>
+                <span class="fs-file-size">620B</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- stolen_creds -->
+          <div class="fs-group">
+            <div class="fs-dir-title" data-dir="stolen_creds">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              stolen_creds/
+            </div>
+            <div class="fs-file-list">
+              <div class="fs-file-item" data-file="hash_dump.txt">
+                <span class="fs-file-name">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                  hash_dump.txt
+                </span>
+                <span class="fs-file-size">1.8K</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- zero_logs -->
+          <div class="fs-group">
+            <div class="fs-dir-title" data-dir="zero_logs">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              zero_logs/
+            </div>
+            <div class="fs-file-list">
+              <div class="fs-file-item" data-file="session_logs.log">
+                <span class="fs-file-name">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                  session_logs.log
+                </span>
+                <span class="fs-file-size">5.1K</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Quick Action Pallet -->
+        <div class="atk-quick-commands">
+          <div class="atk-quick-title">Quick Attack Pallet</div>
+          <div class="atk-quick-grid">
+            <button class="atk-quick-btn" data-cmd="help">⚡ help</button>
+            <button class="atk-quick-btn" data-cmd="scan target">🔍 scan target</button>
+            <button class="atk-quick-btn" data-cmd="vpn connect Amsterdam">🛡️ vpn connect</button>
+            <button class="atk-quick-btn" data-cmd="hydra -l test -P passwords.txt ssh://192.168.1.10">💥 hydra</button>
+            <button class="atk-quick-btn" data-cmd="cat leak_database.enc">📂 cat leaks</button>
+            <button class="atk-quick-btn" data-cmd="export data">🚀 export data</button>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- CENTER PANEL: KALI LINUX TERMINAL WORKSTATION WITH SPIDERWEB BACKGROUND -->
+    <section class="atk-terminal-container">
+      
+      <!-- Terminal Header -->
+      <div class="terminal-header">
+        <div class="terminal-controls">
+          <div class="term-dot dot-red" title="Close" onclick="lockKaliConsole()"></div>
+          <div class="term-dot dot-yellow" title="Minimize"></div>
+          <div class="term-dot dot-green" title="Maximize"></div>
+        </div>
+        <div class="terminal-title">
+          <span class="term-spider-icon">🕸️</span> root@kali: ~/workspace — zsh (80x24)
+        </div>
+        <div class="terminal-tools">
+          <button class="term-tool-btn" id="termBgToggleBtn" onclick="toggleTerminalWallpaper()" title="Toggle Spiderweb HUD Background">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            HUD Wallpaper
+          </button>
+          <button class="term-tool-btn" id="termHelpBtn" title="Help Guide">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </button>
+          <button class="term-tool-btn" id="termClearBtn" title="Clear Screen (Ctrl+L)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Terminal Output Screen with Red Cyber Spiderweb Background -->
+      <div class="terminal-body" id="terminalBody">
+        <div class="term-output" id="termOutput"></div>
+      </div>
+
+      <!-- Terminal Interactive Input -->
+      <div class="terminal-input-row">
+        <div class="term-prompt">
+          <span class="prompt-user">root</span><span class="prompt-at">@</span><span class="prompt-host">kali</span>:<span class="prompt-path" id="promptPath">~/workspace</span><span class="prompt-symbol">#</span>
+        </div>
+        <input type="text" id="termInput" class="term-input" autocomplete="off" spellcheck="false" autofocus placeholder="Type offensive command (e.g. 'help', 'scan target', 'bruteforce --user admin', 'export data')...">
+      </div>
+
+      <!-- Quick Suggestion Chips -->
+      <div class="term-suggestions">
+        <span style="font-size:10px;color:var(--atk-text-dim);margin-right:2px;">Commands:</span>
+        <button class="sugg-chip" data-cmd="help">help</button>
+        <button class="sugg-chip" data-cmd="scan target">scan target</button>
+        <button class="sugg-chip" data-cmd="vpn connect Amsterdam">vpn connect</button>
+        <button class="sugg-chip" data-cmd="hydra -l test -P passwords.txt ssh://192.168.1.10">hydra</button>
+        <button class="sugg-chip" data-cmd="sqli">sqli exploit</button>
+        <button class="sugg-chip" data-cmd="export data">export data</button>
+        <button class="sugg-chip" data-cmd="xss">xss test</button>
+        <button class="sugg-chip" data-cmd="ls">ls</button>
+        <button class="sugg-chip" data-cmd="hashlookup">hashlookup</button>
+        <button class="sugg-chip" data-cmd="clear">clear</button>
+      </div>
+
+    </section>
+
+    <!-- RIGHT PANEL: TARGET INTEL & ATTACK STEPPER -->
+    <aside class="atk-panel atk-sidebar-right">
+      
+      <!-- Target Profile Card -->
+      <div class="telemetry-card">
+        <div class="telemetry-card-title">
+          <span>Target Profile</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+        </div>
+        <div class="target-spec-list">
+          <div class="target-spec-item">
+            <span>Target Host:</span>
+            <b id="targetHostEl">127.0.0.1:8080 (TrapWire Admin)</b>
+          </div>
+          <div class="target-spec-item">
+            <span>Target User:</span>
+            <b>admin</b>
+          </div>
+          <div class="target-spec-item">
+            <span>Admin Alert Mobile:</span>
+            <b style="color:#10b981;">+91 99016 25399</b>
+          </div>
+          <div class="target-spec-item">
+            <span>VPN Circuit:</span>
+            <span class="spec-val-badge badge-standby" id="vpnStatusEl">DISCONNECTED</span>
+          </div>
+          <div class="target-spec-item">
+            <span>Session Status:</span>
+            <span class="spec-val-badge badge-standby" id="sessionStatusEl">ANONYMOUS</span>
+          </div>
+          <div class="target-spec-item">
+            <span>Honeypot State:</span>
+            <span class="spec-val-badge badge-armed" id="honeypotStatusEl">ARMED</span>
+          </div>
+          <div class="target-spec-item">
+            <span>Canary Token:</span>
+            <span class="spec-val-badge badge-armed" id="canaryStatusEl">ARMED</span>
+          </div>
+          <div class="target-spec-item">
+            <span>Active Incident:</span>
+            <b id="incidentIdEl" style="color:var(--atk-text-muted);">NONE</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attack Sequence Checklist -->
+      <div class="telemetry-card">
+        <div class="telemetry-card-title">
+          <span>Attack Sequence</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="attack-stepper">
+          <div class="step-item" id="stepVpn">
+            <div class="step-circle">1</div>
+            <span>Build Multi-Hop VPN Circuit</span>
+          </div>
+          <div class="step-item" id="stepScan">
+            <div class="step-circle">2</div>
+            <span>Reconnaissance &amp; Port Discovery</span>
+          </div>
+          <div class="step-item" id="stepAuth">
+            <div class="step-circle">3</div>
+            <span>Credential Brute-Force Attack</span>
+          </div>
+          <div class="step-item" id="stepHoneypot">
+            <div class="step-circle">4</div>
+            <span>Honeypot Quarantined Isolation</span>
+          </div>
+          <div class="step-item" id="stepExport">
+            <div class="step-circle">5</div>
+            <span>Decoy Customer Data Exfiltration</span>
+          </div>
+          <div class="step-item" id="stepCanary">
+            <div class="step-circle">6</div>
+            <span>Canary De-Anonymization &amp; DPB Report</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Resources & Cryptographic Engine -->
+      <div class="telemetry-card">
+        <div class="telemetry-card-title">
+          <span>Workstation Telemetry</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        
+        <div class="metric-row">
+          <div class="metric-label-val">
+            <span>CPU Core Utilization</span>
+            <b id="cpuVal">42%</b>
+          </div>
+          <div class="metric-bar-bg">
+            <div class="metric-bar-fill" id="cpuFill" style="width:42%;"></div>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric-label-val">
+            <span>Encrypted RAM Pool</span>
+            <b id="memVal">58%</b>
+          </div>
+          <div class="metric-bar-bg">
+            <div class="metric-bar-fill fill-green" id="memFill" style="width:58%;"></div>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric-label-val">
+            <span>Simulated Network RX/TX</span>
+            <b id="netVal">1482.6 KB/s</b>
+          </div>
+          <div class="metric-bar-bg">
+            <div class="metric-bar-fill fill-red" id="netFill" style="width:68%;"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--atk-border);font-size:10.5px;color:var(--atk-text-dim);">
+          Cryptographic Ciphers: <code>AES-256-GCM / SHA-256 / RSA-4096</code>
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- BOTTOM STATUS FOOTER -->
+  <footer class="atk-footer">
+    <div class="atk-footer-left">
+      <div class="footer-item">
+        <div class="footer-dot dot-red"></div>
+        <span>TRAPWIRE OFFSEC PENTEST WORKSTATION (PORT 9000)</span>
+      </div>
+      <div class="footer-item">
+        <div class="footer-dot dot-green"></div>
+        <span>SAFE LOCAL SANDBOX ONLY</span>
+      </div>
+    </div>
+    <div class="atk-footer-right">
+      <div class="footer-item">
+        <span>TARGET GATEWAY: <code>http://127.0.0.1:8080</code></span>
+      </div>
+      <div class="footer-item">
+        <span>HONEYPOT DECEPTION: <b style="color:var(--atk-cyan);">ACTIVE</b></span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Simulation Configuration -->
+  <script>
+    window.TARGET_API_BASE = {{ target_api_base|tojson if target_api_base is defined else '"http://127.0.0.1:8080"' }};
+    window.TARGET_USERNAME = {{ target_username|tojson if target_username is defined else '"admin"' }};
+    window.WORDLIST = {{ wordlist|tojson if wordlist is defined else '["123456", "password", "admin123", "admin@123", "Welcome@123", "qwerty123", "Admin@2026!", "letmein123"]' }};
+    window.VPN_NODES = {{ vpn_nodes|tojson if vpn_nodes is defined else '[]' }};
+
+    // Sound FX engine using Web Audio API
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+    }
+
+    function playTone(freq, type = "sine", duration = 0.08, gain = 0.1) {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(gain, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playKeyClickSound() { playTone(1200 + Math.random() * 400, "triangle", 0.03, 0.04); }
+    function playBeepSound() { playTone(880, "sine", 0.12, 0.1); }
+    function playAlarmSound() {
+      playTone(440, "sawtooth", 0.15, 0.15);
+      setTimeout(() => playTone(660, "sawtooth", 0.15, 0.15), 160);
+    }
+    function playSuccessSound() {
+      playTone(523.25, "sine", 0.1, 0.12);
+      setTimeout(() => playTone(659.25, "sine", 0.1, 0.12), 100);
+      setTimeout(() => playTone(783.99, "sine", 0.2, 0.15), 200);
+    }
+
+    function toggleSoundFX() {
+      soundEnabled = !soundEnabled;
+      const statusEl = document.getElementById("soundStatus");
+      const iconEl = document.getElementById("soundIcon");
+      if (statusEl) statusEl.textContent = soundEnabled ? "ON" : "OFF";
+      if (iconEl) iconEl.textContent = soundEnabled ? "🔊" : "🔇";
+      if (soundEnabled) playSuccessSound();
+    }
+
+    // Toggle terminal spiderweb wallpaper opacity
+    function toggleTerminalWallpaper() {
+      const term = document.getElementById("terminalBody");
+      if (!term) return;
+      term.classList.toggle("no-wallpaper");
+      playBeepSound();
+    }
+
+    // Matrix particle background in login screen
+    (function() {
+      const canvas = document.getElementById("kaliMatrixCanvas");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      let w = canvas.width = window.innerWidth;
+      let h = canvas.height = window.innerHeight;
+      const cols = Math.floor(w / 20) + 1;
+      const ypos = Array(cols).fill(0);
+
+      window.addEventListener("resize", () => {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      });
+
+      const chars = "TRAPWIRE010101KALIEXPLOITROOTBREACHDECEPTION2026";
+      function matrixStep() {
+        ctx.fillStyle = "rgba(4, 8, 16, 0.15)";
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = "#EF4444";
+        ctx.font = "12pt JetBrains Mono, monospace";
+
+        ypos.forEach((y, ind) => {
+          const text = chars.charAt(Math.floor(Math.random() * chars.length));
+          const x = ind * 20;
+          ctx.fillText(text, x, y);
+          if (y > 100 + Math.random() * 10000) ypos[ind] = 0;
+          else ypos[ind] = y + 20;
+        });
+      }
+      setInterval(matrixStep, 50);
+    })();
+
+    // Boot progress animation
+    let bootProgress = 0;
+    const bootTexts = [
+      "SYS_INIT: Initializing Cryptographic Shell & Deception Probes...",
+      "MODULE_LOAD: Loading Metasploit, Nmap, Deception Engines...",
+      "NET_SOCKET: Probing Target 127.0.0.1:8080 Authentication Gateway...",
+      "READY: Offensive Security Workstation Armed."
+    ];
+
+    const bootInterval = setInterval(() => {
+      bootProgress += 25;
+      const fill = document.getElementById("bootFill");
+      const text = document.getElementById("bootText");
+      if (fill) fill.style.width = bootProgress + "%";
+      if (text && bootTexts[Math.floor(bootProgress / 25) - 1]) {
+        text.textContent = bootTexts[Math.floor(bootProgress / 25) - 1];
+      }
+      if (bootProgress >= 100) {
+        clearInterval(bootInterval);
+      }
+    }, 400);
+
+    // Notify Company Server of Attacker Event
+    // Notify Company Server of Attacker Event with Rich Forensic Metadata
+    async function notifyCompanyServer(eventType, meta = {}) {
+      const base = window.TARGET_API_BASE || "http://127.0.0.1:8080";
+      const user = typeof meta === "string" ? meta : (meta.user || sessionStorage.getItem("kali_user") || "root");
+      const ip = (window.AttackerState && window.AttackerState.apparentIp) || meta.ip || "185.220.101.45 (Tor Relay)";
+      
+      const payloadData = typeof meta === "object" ? {
+        event: eventType,
+        user: user,
+        ip: ip,
+        tool: meta.tool || "Kali Pentest Console",
+        payload: meta.payload || "",
+        target: meta.target || "/api/orders",
+        files: meta.files || "",
+        node: meta.node || "",
+        password_attempt: meta.password_attempt || ""
+      } : {
+        event: eventType,
+        user: user,
+        ip: ip,
+        tool: "Kali Pentest Console"
+      };
+
+      try {
+        await fetch(`${base}/api/attacker-session-event`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payloadData)
+        });
+      } catch (e) {
+        console.log("Telemetry dispatch info:", e.message);
+      }
+    }
+    window.notifyCompanyServer = notifyCompanyServer;
+
+    function handleKaliLogin(e) {
+      if (e) e.preventDefault();
+      initAudio();
+
+      const user = (document.getElementById("kaliUser").value || "root").trim();
+      const pass = (document.getElementById("kaliPass").value || "").trim();
+      const overlay = document.getElementById("kaliLoginOverlay");
+      const bootText = document.getElementById("bootText");
+
+      // Valid credentials: root/toor, kali/kali, admin/Admin@2026!
+      const validCreds = (user === "root" && (pass === "toor" || pass === "root")) ||
+                         (user === "kali" && (pass === "kali" || pass === "toor")) ||
+                         (user === "admin" && (pass === "Admin@2026!" || pass === "admin123" || pass === "toor")) ||
+                         (pass === "toor" || pass === "kali");
+
+      if (!validCreds) {
+        playAlarmSound();
+        if (bootText) {
+          bootText.innerHTML = `<span style="color:#EF4444;font-weight:700;">⛔ AUTHENTICATION FAILED: Invalid passphrase for '${user}'</span>`;
+        }
+        // Notify company server of failed login attempt
+        notifyCompanyServer("terminal_login_attempt", { 
+          user: user, 
+          password_attempt: pass || "[empty]",
+          tool: "Kali Workstation Login HUD"
+        });
+        return;
+      }
+
+      playSuccessSound();
+      if (overlay) overlay.classList.add("hidden");
+      sessionStorage.setItem("kali_authenticated", "true");
+      sessionStorage.setItem("kali_user", user);
+
+      // Notify company server of successful hacker login
+      notifyCompanyServer("terminal_login_success", { 
+        user: user, 
+        password_attempt: pass,
+        tool: "Kali OffSec Workstation"
+      });
+
+      setTimeout(() => {
+        document.getElementById("termInput")?.focus();
+      }, 300);
+    }
+
+    function quickKaliLogin(u, p) {
+      document.getElementById("kaliUser").value = u;
+      document.getElementById("kaliPass").value = p;
+      handleKaliLogin();
+    }
+
+    function lockKaliConsole() {
+      playBeepSound();
+      sessionStorage.removeItem("kali_authenticated");
+      if (window.location.port === "9000") {
+        window.location.href = "/login";
+      } else {
+        window.location.href = "/attacker/login";
+      }
+    }
+
+    function handleReset() {
+      playAlarmSound();
+      if (window.confirm("Reset all simulated alerts, incident records, and honeypot sessions?")) {
+        const base = window.TARGET_API_BASE || "http://127.0.0.1:8080";
+        fetch(`${base}/api/reset-demo`).then(() => {
+          window.location.reload();
+        }).catch(() => {
+          window.location.reload();
+        });
+      }
+    }
+
+    // Check session unlock status on load
+    if (sessionStorage.getItem("kali_authenticated") === "true") {
+      document.getElementById("kaliLoginOverlay")?.classList.add("hidden");
+    }
+
+    // Keyboard sound on typing
+    document.addEventListener("keydown", (e) => {
+      if (e.target.tagName === "INPUT") {
+        playKeyClickSound();
+      }
+    });
+  </script>
+  <script src="/static/js/attacker_terminal.js"></script>
+</body>
+</html>
