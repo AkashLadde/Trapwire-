@@ -191,11 +191,11 @@
         </div>
       </div>
       <div class="stat-card stat-action" style="display:flex; flex-direction:column; justify-content:center; gap:8px;">
-        <button class="btn btn-primary full" id="openAddOrderBtn" style="background:#2563eb; color:#fff; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px;">
+        <button class="btn btn-primary full" id="openAddOrderBtn" onclick="openOrderModal()" style="background:#2563eb; color:#fff; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add Customer Order
         </button>
-        <button class="btn btn-dark full" id="exportBtn" style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:12px; padding:6px 12px;">
+        <button class="btn btn-dark full" id="exportBtn" style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:12px; padding:6px 12px; cursor:pointer;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export Customer Data
         </button>
@@ -207,7 +207,7 @@
         <h2>Recent Customer Orders</h2>
         <div style="display:flex; align-items:center; gap:10px;">
           {% if not suspicious %}<span class="tag tag-safe">DPDP Masking Active</span>{% else %}<span class="tag tag-live">Decoy Honeypot Active</span>{% endif %}
-          <button class="btn btn-primary" id="openAddOrderHeaderBtn" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:5px 12px; background:#2563eb; color:#fff; border-radius:6px; font-weight:600; cursor:pointer; border:none;">
+          <button class="btn btn-primary" id="openAddOrderHeaderBtn" onclick="openOrderModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:5px 12px; background:#2563eb; color:#fff; border-radius:6px; font-weight:600; cursor:pointer; border:none;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             + Add Order
           </button>
@@ -274,7 +274,7 @@
               <div style="font-size: 13px; max-width: 480px; margin: 0 auto 16px; line-height: 1.5; color: var(--text-muted);">
                 All synthetic customer records have been purged. As an administrator, you have full privilege to add authentic orders to this production database.
               </div>
-              <button class="btn btn-primary" id="emptyAddOrderBtn" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:7px 18px; background:#2563eb; color:#fff; border-radius:6px; font-weight:600; cursor:pointer; border:none;">
+              <button class="btn btn-primary" id="emptyAddOrderBtn" onclick="openOrderModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:7px 18px; background:#2563eb; color:#fff; border-radius:6px; font-weight:600; cursor:pointer; border:none;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 + Add Customer Order
               </button>
@@ -987,43 +987,43 @@
 {% if not suspicious %}
 <!-- MODALS -->
 <!-- ADD CUSTOMER ORDER MODAL -->
-<div class="modal-overlay hidden" id="addOrderModal">
+<div class="modal-overlay hidden" id="addOrderModal" style="z-index: 10000;">
   <div class="modal-box" style="max-width:540px;">
     <div class="modal-head">
       <h3>Add New Customer Order</h3>
-      <button class="modal-close" id="closeAddOrderModal">&times;</button>
+      <button class="modal-close" id="closeAddOrderModal" onclick="closeOrderModal()">&times;</button>
     </div>
     <p style="font-size:12px; color:var(--text-muted); margin:4px 0 16px;">
       Admin privilege active. Sensitive PII (Aadhaar, PAN, Card) is automatically masked under the DPDP Act, 2023.
     </p>
-    <form id="addOrderForm">
+    <form id="addOrderForm" onsubmit="handleOrderFormSubmit(event)">
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div style="grid-column: span 2;">
           <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Customer Full Name *</label>
           <input type="text" id="ordCustomer" required placeholder="e.g. Vikramaditya Sen" style="width:100%; box-sizing:border-box;">
         </div>
         <div>
-          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Email Address *</label>
-          <input type="email" id="ordEmail" required placeholder="e.g. vikram@example.com" style="width:100%; box-sizing:border-box;">
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Email Address (Optional)</label>
+          <input type="email" id="ordEmail" placeholder="e.g. vikram@example.com" style="width:100%; box-sizing:border-box;">
         </div>
         <div>
-          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Phone Number *</label>
-          <input type="text" id="ordPhone" required placeholder="e.g. +91 98201 12345" style="width:100%; box-sizing:border-box;">
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Phone Number (Optional)</label>
+          <input type="text" id="ordPhone" placeholder="e.g. +91 98201 12345" style="width:100%; box-sizing:border-box;">
         </div>
         <div>
-          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Item / Product Name *</label>
-          <input type="text" id="ordItem" required placeholder="e.g. Secure Hardware Token" style="width:100%; box-sizing:border-box;">
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Item / Product Name</label>
+          <input type="text" id="ordItem" placeholder="e.g. Secure Hardware Token" style="width:100%; box-sizing:border-box;">
         </div>
         <div>
-          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Order Value (₹) *</label>
-          <input type="number" id="ordValue" required min="1" placeholder="e.g. 18500" style="width:100%; box-sizing:border-box;">
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Order Value (₹)</label>
+          <input type="number" id="ordValue" min="1" placeholder="e.g. 18500" style="width:100%; box-sizing:border-box;">
         </div>
         <div>
           <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Fulfillment Status</label>
           <select id="ordStatus" style="width:100%; box-sizing:border-box; padding:8px; border-radius:6px; border:1px solid #CBD5E1; background:#fff;">
-            <option value="Delivered">Delivered</option>
+            <option value="Delivered" selected>Delivered</option>
             <option value="Shipped">Shipped</option>
-            <option value="Processing" selected>Processing</option>
+            <option value="Processing">Processing</option>
             <option value="Pending">Pending</option>
           </select>
         </div>
@@ -1045,8 +1045,8 @@
         </div>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
-        <button type="button" class="btn btn-dark" id="cancelAddOrderModal">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="saveAddOrderBtn" style="background:#2563eb; color:#fff; font-weight:600;">Save Customer Order</button>
+        <button type="button" class="btn btn-dark" id="cancelAddOrderModal" onclick="closeOrderModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveAddOrderBtn" style="background:#2563eb; color:#fff; font-weight:600; cursor:pointer;">Save Customer Order</button>
       </div>
     </form>
   </div>
@@ -1249,10 +1249,10 @@ function triggerHardwareTest() {
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script id="recordsData" type="application/json">{{ records|tojson }}</script>
-<script src="/static/js/company.js"></script>
+<script src="/static/js/company.js?v={{ range(1000, 99999)|random }}"></script>
 <script>window.SUSPICIOUS = {{ 'true' if suspicious else 'false' }};</script>
 {% if not suspicious %}
-<script src="/static/js/workspace.js"></script>
+<script src="/static/js/workspace.js?v={{ range(1000, 99999)|random }}"></script>
 {% endif %}
 </body>
 </html>
