@@ -234,10 +234,11 @@ async def trapwire_lab_detection_middleware(request, call_next):
 # ---------------------------------------------------------------- landing --
 @app.get("/", response_class=HTMLResponse)
 def landing(request: Request):
+    base = str(request.base_url).rstrip("/")
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "company_url": "http://127.0.0.1:8080/company/login",
-        "attacker_url": "http://127.0.0.1:9000/"
+        "company_url": f"{base}/company/login",
+        "attacker_url": f"{base}/attacker"
     })
 
 
@@ -250,9 +251,10 @@ def company_login_page(request: Request):
 # -------------------------------------------------------------- attacker --
 @app.get("/attacker/login", response_class=HTMLResponse)
 def attacker_login_page(request: Request):
+    base = str(request.base_url).rstrip("/")
     return templates.TemplateResponse("attacker_login.html", {
         "request": request,
-        "target_api_base": "http://127.0.0.1:8080",
+        "target_api_base": base,
         "target_username": "admin"
     })
 
@@ -260,13 +262,14 @@ def attacker_login_page(request: Request):
 @app.get("/attacker", response_class=HTMLResponse)
 @app.get("/attacker/console", response_class=HTMLResponse)
 def attacker_console_page(request: Request):
+    base = str(request.base_url).rstrip("/")
     return templates.TemplateResponse("attacker_portal.html", {
         "request": request,
         "target_username": "admin",
         "wordlist": ["123456", "password", "admin123", "admin@123", "Welcome@123", "qwerty123", "Admin@2026!", "letmein123"],
         "vpn_nodes": VPN_NODES,
         "show_login": False,
-        "target_api_base": "http://127.0.0.1:8080"
+        "target_api_base": base
     })
 
 
@@ -800,13 +803,6 @@ async def ws_alerts(websocket: WebSocket):
         if websocket in state.ADMIN_SOCKETS:
             state.ADMIN_SOCKETS.remove(websocket)
 
-
-# -------------------------------------------------------------- attacker --
-@app.get("/attacker", response_class=HTMLResponse)
-@app.get("/attacker/login", response_class=HTMLResponse)
-def attacker_portal_redirect(request: Request):
-    # Direct to port 9000 attacker console
-    return RedirectResponse(url="http://127.0.0.1:9000/")
 
 
 @app.get("/api/reset-demo")

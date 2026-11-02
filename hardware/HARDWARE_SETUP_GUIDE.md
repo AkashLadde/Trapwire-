@@ -60,10 +60,66 @@ This guide details how to integrate **physical IoT and embedded hardware** with 
 | **GPIO 19** | Active Buzzer | **(+) / Signal**| Trigger Pin |
 | **GND** | Active Buzzer | **(-)** | Ground |
 
+---
+
+### B. NodeMCU (ESP8266) with Dual LEDs (White & Red), OLED & Buzzer
+
+If you have a **NodeMCU ESP8266** with discrete **White LED**, **Red LED**, **0.96" OLED**, and an **Active Buzzer**, use this exact wiring table and the firmware at `hardware/nodemcu_threat_siren.ino`:
+
+| NodeMCU Pin | GPIO | Target Component | Component Pin | Notes & Resistor |
+| :--- | :--- | :--- | :--- | :--- |
+| **3V3** | 3.3V | OLED SSD1306 | **VCC** | 3.3V Power rail |
+| **GND** | GND | OLED + LEDs + Buzzer | **GND / (-)** | Common Ground rail on breadboard |
+| **D1** | GPIO 5 | OLED SSD1306 | **SCL / SCK** | I2C Clock line |
+| **D2** | GPIO 4 | OLED SSD1306 | **SDA** | I2C Data line |
+| **D5** | GPIO 14 | **White LED** | **Anode (+ / Long leg)** | In series with **220Ω - 330Ω** resistor. Indicates **System Armed / Normal Guard** |
+| **D6** | GPIO 12 | **Red LED** | **Anode (+ / Long leg)** | In series with **220Ω - 330Ω** resistor. Strobes rapidly on **Threat / Attack** |
+| **D7** | GPIO 13 | **Active Buzzer** | **(+) or Signal** | Emits high-priority tactical warning chimes on attack |
+
+#### Breadboard Wiring Summary for NodeMCU:
+1. **Common Ground**: Connect NodeMCU `GND` to the blue (-) ground rail on your breadboard.
+2. **OLED (I2C SSD1306 128x64)**:
+   - `VCC` $\rightarrow$ NodeMCU `3V3`
+   - `GND` $\rightarrow$ Breadboard Ground rail
+   - `SCL` $\rightarrow$ NodeMCU `D1` (GPIO 5)
+   - `SDA` $\rightarrow$ NodeMCU `D2` (GPIO 4)
+3. **White LED (Normal Standby Guard)**:
+   - Long leg (+) $\rightarrow$ 220Ω or 330Ω resistor $\rightarrow$ NodeMCU `D5` (GPIO 14)
+   - Short leg (-) $\rightarrow$ Breadboard Ground rail
+4. **Red LED (Breach Alarm Strobe)**:
+   - Long leg (+) $\rightarrow$ 220Ω or 330Ω resistor $\rightarrow$ NodeMCU `D6` (GPIO 12)
+   - Short leg (-) $\rightarrow$ Breadboard Ground rail
+5. **Active Buzzer (Audio Alert Siren)**:
+   - Positive pin (+) $\rightarrow$ NodeMCU `D7` (GPIO 13)
+   - Negative pin (-) $\rightarrow$ Breadboard Ground rail
+
+---
 
 ## 4. Flashing & Running the Firmware
 
-### Step 1: Upload Arduino Code to ESP32
+### Option 1: Uploading to NodeMCU (ESP8266)
+1. Open the [Arduino IDE](https://www.arduino.cc/en/software).
+2. Add ESP8266 Board URL in *File > Preferences > Additional Boards Manager URLs*:
+   ```
+   http://arduino.esp8266.com/stable/package_esp8266com_index.json
+   ```
+3. Go to *Tools > Board > Boards Manager*, search for **esp8266** by ESP8266 Community, and click **Install**.
+4. Install required libraries via *Sketch > Include Library > Manage Libraries*:
+   - `Adafruit SSD1306`
+   - `Adafruit GFX Library`
+   - `ArduinoJson` (version 6 or 7)
+5. Open `hardware/nodemcu_threat_siren.ino` in Arduino IDE.
+6. Under *Tools*, configure:
+   - **Board**: `NodeMCU 1.0 (ESP-12E Module)`
+   - **Upload Speed**: `115200`
+   - **Port**: Select your NodeMCU's COM port (e.g. `COM3` on Windows or `/dev/ttyUSB0` on Linux)
+7. Click **Upload**.
+8. Once uploaded:
+   - The **White LED** will light up solid (System Armed).
+   - The **OLED** will display `TRAPWIRE DEFENDER - STATUS: ARMED & READY`.
+   - The **Red LED** and **Buzzer** remain silent until an attack arrives.
+
+### Option 2: Uploading to ESP32
 1. Open the [Arduino IDE](https://www.arduino.cc/en/software).
 2. Install the ESP32 Board package via *Tools > Board Manager*.
 3. Install required libraries (*Sketch > Include Library > Manage Libraries*):

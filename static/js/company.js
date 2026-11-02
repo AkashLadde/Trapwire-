@@ -1132,10 +1132,13 @@ window.handleDeleteOrder = async function(orderId, btn) {
       row?.remove();
       window.updateOrderStatsDisplay();
       if (typeof window.refreshOrdersFilter === "function") window.refreshOrdersFilter();
-      if (typeof showToast === "function") showToast(`Order ${orderId} deleted.`);
+      if (typeof showToast === "function") showToast(`Order ${orderId} deleted successfully.`);
+    } else {
+      alert("Failed to delete order: " + (data.error || "Server rejected request."));
     }
   } catch (err) {
     console.error("Error deleting order:", err);
+    alert("Network error deleting order: " + err.message);
   }
 };
 
@@ -1198,6 +1201,15 @@ function setupOrderAdminControls() {
   const modal = document.getElementById("addOrderModal");
   modal?.addEventListener("click", (e) => {
     if (e.target === modal) window.closeOrderModal();
+  });
+
+  const ordersTable = document.getElementById("ordersTable");
+  ordersTable?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-delete-order");
+    if (btn) {
+      const orderId = btn.getAttribute("data-order-id");
+      if (orderId) window.handleDeleteOrder(orderId, btn);
+    }
   });
 }
 
