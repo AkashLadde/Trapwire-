@@ -60,18 +60,6 @@ This guide details how to integrate **physical IoT and embedded hardware** with 
 | **GPIO 19** | Active Buzzer | **(+) / Signal**| Trigger Pin |
 | **GND** | Active Buzzer | **(-)** | Ground |
 
-### B. SIM800L GSM Module (Optional Physical SMS Relay)
-
-> **Note:** The SIM800L module uses a standard Mini-SIM card with active SMS balance.
-
-| USB-to-TTL Adapter Pin | SIM800L Module Pin | Notes |
-| :--- | :--- | :--- |
-| **TX** | **RXD** | Serial Receive |
-| **RX** | **TXD** | Serial Transmit |
-| **GND** | **GND** | Common Ground |
-| **External 4.2V 2A** | **VCC** | SIM800L requires 3.7V - 4.2V (2A burst current) |
-
----
 
 ## 4. Flashing & Running the Firmware
 
