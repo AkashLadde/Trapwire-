@@ -21,7 +21,7 @@
 ║ FILE: leak_database.enc                                              ║
 ║ SIZE: 12.4 MB                                                        ║
 ║ ENCRYPTION: AES-256-GCM                                              ║
-║ RECORDS: 14                                                          ║
+║ RECORDS: Active Database Records                                      ║
 ║ CLASSIFICATION: ENCRYPTED CORPORATE RECORDS                          ║
 ║ STATUS: READY FOR EXPORT                                             ║
 ╚══════════════════════════════════════════════════════════════════════╝
@@ -43,7 +43,7 @@ Record Set Preview:
         content: `[ENCRYPTED CLIENT ARCHIVE]
 FORMAT: JSON-LINES (GZIP/AES)
 DATASET: E-Commerce Customer Profiles
-TOTAL OBJECTS: 14 records
+TOTAL OBJECTS: Active database records
 INTEGRITY HASH: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 USE 'export data' TO EXTRACT PAYLOAD.`
       },
@@ -794,11 +794,26 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine("─────────────────────────────────────────────────────────────────────────────", "dim");
       printLine("Order ID    Customer Name       City        Status       Phone", "cyan");
       printLine("─────────────────────────────────────────────────────────────────────────────", "dim");
-      printLine("ORD-749201  Aarav Sharma        Bengaluru   Delivered    +91 90000-00001", "info");
-      printLine("ORD-839104  Ananya Reddy        Mumbai      Shipped      +91 90000-00002", "info");
-      printLine("ORD-194820  Kabir Verma         Delhi       Processing   +91 90000-00003", "info");
-      printLine("ORD-402918  Meera Iyer          Hyderabad   Delivered    +91 90000-00004", "info");
-      printLine("ORD-592817  Vivaan Nair         Pune        Delivered    +91 90000-00005", "info");
+      try {
+        const res = await fetch(`${API_BASE}/api/orders`);
+        const data = await res.json();
+        const orders = data.orders || [];
+        if (orders.length > 0) {
+          orders.forEach(o => {
+            const city = (o.address || "").split(",").pop().trim() || "India";
+            const id = (o.order_id || "ORD").padEnd(12);
+            const name = (o.customer_name || "Customer").padEnd(20);
+            const cty = city.padEnd(12);
+            const st = (o.status || "Delivered").padEnd(13);
+            const ph = o.phone_display || o.phone || "Protected";
+            printLine(`${id}${name}${cty}${st}${ph}`, "info");
+          });
+        } else {
+          printLine("ORD-749201  Decoy Customer      Bengaluru   Delivered    +91 90000-00001", "info");
+        }
+      } catch (e) {
+        printLine("ORD-749201  Decoy Customer      Bengaluru   Delivered    +91 90000-00001", "info");
+      }
       printLine("─────────────────────────────────────────────────────────────────────────────", "dim");
       printLine("Use <b>export data</b> to dump full cryptographic export package.", "warning");
     },
@@ -844,17 +859,15 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
         scrollToBottom();
       }
 
-      await sleep(300);
-      printLine("<span class='term-tag tag-success'>[+]</span> Records discovered: 14", "success");
-      await sleep(200);
-      printLine("<span class='term-tag tag-success'>[+]</span> Export package generated: <code>customer_export.json</code>", "success");
-      await sleep(200);
-
       // Fetch actual backend export
       let payload = null;
+      let recCount = 1;
       try {
         const res = await fetch(`${API_BASE}/api/export`, { credentials: "include" });
         payload = await res.json();
+        if (Array.isArray(payload)) {
+          recCount = payload.length;
+        }
 
         // Download JSON file locally
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -866,6 +879,11 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       } catch (err) {
         console.error("Export fetch error:", err);
       }
+
+      await sleep(200);
+      printLine(`<span class='term-tag tag-success'>[+]</span> Records discovered: ${recCount}`, "success");
+      await sleep(150);
+      printLine("<span class='term-tag tag-success'>[+]</span> Export package generated: <code>customer_export.json</code>", "success");
 
       // ASCII SUCCESS BANNER
       const asciiBanner = `
@@ -884,7 +902,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printRaw(asciiBanner);
 
       printLine("<span class='term-tag tag-success'>[+]</span> <b>DATA EXFILTRATION ACQUIRED</b>", "success");
-      printLine("<span class='term-tag tag-info'>[+]</span> RECORDS: 14", "info");
+      printLine(`<span class='term-tag tag-info'>[+]</span> RECORDS: ${recCount}`, "info");
       printLine("<span class='term-tag tag-honey'>[+]</span> <b>HONEYPOT TRIGGER: ACTIVE</b> (All personal data SHA-256 hashed & synthetic)", "error");
       printLine(`<span class='term-tag tag-warn'>[+]</span> INCIDENT ID: <b>${state.incidentId}</b>`, "warning");
       printLine("<span class='term-tag tag-error'>[!]</span> <b>DEFENDER ALERT: GENERATED</b> (Logged to Company Security Center & DPB Registry)", "error");

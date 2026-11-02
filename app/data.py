@@ -130,19 +130,46 @@ def generate_honeypot_view(n=14):
     return generate_customers(n)
 
 
-def generate_honeypot_export(canary_url_base: str, token: str, n=14):
+def generate_honeypot_export(canary_url_base: str, token: str, source_records: list = None, n: int = None):
     """
-    What actually gets served when a flagged session calls /api/export --
-    i.e. the file that leaves the system. Structurally identical to the
-    real dataset, but every sensitive field is replaced with its SHA-256
-    hash rather than a plausible-looking fake value, and the whole export
-    carries a canary tracking link. So an attacker who exports data gets:
-    (a) no usable personal data at all -- it was synthetic to begin with,
-        and hashed on top of that for good measure, and
-    (b) a tracking token that attributes them the moment they open it.
+    Produces the canary-laced export served to an attacker.
+    If source_records (the actual live orders in the company dashboard) are available,
+    it exports those EXACT orders, but replaces all sensitive fields (Aadhaar, PAN,
+    Phone, Email, Card) with one-way SHA-256 cryptographic hashes and embeds the
+    active Canary tracking beacon. This ensures:
+    1. The attacker gets the exact number and identity of records present on the dashboard.
+    2. No genuine unmasked PII ever leaves the system.
+    3. Any attempt by the attacker to open the file trips the canary attribution beacon.
     """
-    records = generate_customers(n)
     canary_link = f"{canary_url_base}/canary/{token}"
+
+    if source_records and len(source_records) > 0:
+        exported = []
+        for orig in source_records:
+            r = dict(orig)
+            raw_aadhaar = str(r.get("aadhaar") or "")
+            raw_pan = str(r.get("pan") or "")
+            raw_phone = str(r.get("phone") or "")
+            raw_email = str(r.get("email") or "")
+            raw_card = str(r.get("card_last4") or "")
+
+            r["aadhaar"] = _hash_field(raw_aadhaar) if raw_aadhaar else _hash_field("AADHAAR_NULL")
+            r["pan"] = _hash_field(raw_pan) if raw_pan else _hash_field("PAN_NULL")
+            r["phone"] = _hash_field(raw_phone) if raw_phone else _hash_field("PHONE_NULL")
+            r["email"] = _hash_field(raw_email) if raw_email else _hash_field("EMAIL_NULL")
+            r["card_last4"] = (_hash_field(raw_card)[:12]) if raw_card else _hash_field("CARD_NULL")[:12]
+
+            for k in ("aadhaar_display", "pan_display", "card_display", "phone_display", "email_display"):
+                r.pop(k, None)
+
+            r["_data_protection_note"] = "Sensitive fields are SHA-256 hashed and cannot be reversed."
+            r["_tracking_invoice_url"] = canary_link
+            exported.append(r)
+        return exported
+
+    # Fallback if no orders exist yet: 1 decoy canary trap record
+    count = n if n is not None else 1
+    records = generate_customers(count)
     for r in records:
         r["order_id"] = "ORD" + "".join(random.choices(string.digits, k=6))
         r["aadhaar"] = _hash_field(r["aadhaar"])
@@ -151,5 +178,5 @@ def generate_honeypot_export(canary_url_base: str, token: str, n=14):
         r["email"] = _hash_field(r["email"])
         r["card_last4"] = _hash_field(r["card_last4"])[:12]
         r["_data_protection_note"] = "Sensitive fields are SHA-256 hashed and cannot be reversed."
-        r["_tracking_invoice_url"] = canary_link  # the "bait"
+        r["_tracking_invoice_url"] = canary_link
     return records

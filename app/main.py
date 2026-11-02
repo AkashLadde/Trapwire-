@@ -498,7 +498,9 @@ async def attacker_session_event(request: Request):
         ack_info = await auto_submit_report(stage="preliminary", reason=f"SQL Injection payload '{payload_str}' from {clean_ip}")
         
     elif event_type in ("data_exfiltration", "export"):
-        files = body.get("files", "customer_export.json (14 PII records)")
+        count = len(REAL_CUSTOMERS) if len(REAL_CUSTOMERS) > 0 else 1
+        default_files = f"customer_export.json ({count} PII record{'s' if count != 1 else ''})"
+        files = body.get("files") or default_files
         msg = f"🚨 DATA EXFILTRATION DETECTED: Attacker at {clean_ip} [{geo['isp']}] extracted `{files}`. Decoy honeypot dataset served with active Canary tripwires."
         level = "critical"
         state.BREACH.update({
@@ -577,7 +579,7 @@ async def api_export(request: Request):
     if suspicious:
         token = request.session.get("canary_token") or str(uuid.uuid4())
         base = str(request.base_url).rstrip("/")
-        payload = data.generate_honeypot_export(base, token, n=14)
+        payload = data.generate_honeypot_export(base, token, source_records=REAL_CUSTOMERS)
 
         ip = client_ip(request)
         geo = resolve_ip_geolocation(ip)
@@ -588,11 +590,12 @@ async def api_export(request: Request):
             "download_time": time.time(),
         })
 
+        rec_count = len(payload)
         alert = state.new_alert(
-            f"🚨 EXFILTRATION ATTEMPT DETECTED: Flagged session from IP {ip} ({geo['isp']}) downloaded customer dataset. "
-            f"Decoy honeypot dataset with active canary tracking token served instead of real data.",
+            f"🚨 EXFILTRATION ATTEMPT DETECTED: Flagged session from IP {ip} ({geo['isp']}) downloaded customer dataset ({rec_count} record{'s' if rec_count != 1 else ''}). "
+            f"Decoy honeypot dataset with active canary tracking token served instead of raw unmasked data.",
             level="critical",
-            meta={"ip": ip, "isp": geo["isp"], "token": token, "type": "data_exfiltration"}
+            meta={"ip": ip, "isp": geo["isp"], "token": token, "type": "data_exfiltration", "count": rec_count}
         )
         await broadcast_alert(alert)
 

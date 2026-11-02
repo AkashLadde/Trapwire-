@@ -359,7 +359,7 @@ function updateSocAttackerCard(a) {
     threatLabel = "Decoy Data Exfiltration";
     defcon = "DEFCON 1 · STATUTORY BREACH";
     defconClass = "defcon-1";
-    if (socPayloadCode) socPayloadCode.textContent = "GET /api/export -> customer_export.json (14 PII Decoy Records)";
+    if (socPayloadCode) socPayloadCode.textContent = "GET /api/export -> customer_export.json (Decoy Canary Records)";
     if (socTargetEndpoint) socTargetEndpoint.textContent = "/api/export (Decoy Honeypot Quarantined)";
   } else if (msg.includes("CANARY") || meta.type === "canary_hit") {
     threatLabel = "Canary Token Attribution";
@@ -657,7 +657,7 @@ window.triggerSimEvent = async function(type) {
     payload = "DICTIONARY_CRACK: Candidate wordlist loaded (123456...Admin@2026!)";
     target = "/company/login";
   } else if (type === "data_exfiltration") {
-    payload = "EXFIL_PII: 14 customer records extracted to customer_export.json";
+    payload = "EXFIL_PII: Customer records extracted to customer_export.json";
     target = "/api/export";
   } else if (type === "canary_hit") {
     payload = "CANARY_BEACON: tracking_invoice_90412.pdf phoned home";
