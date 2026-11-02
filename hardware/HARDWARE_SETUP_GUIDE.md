@@ -46,7 +46,40 @@ This guide details how to integrate **physical IoT and embedded hardware** with 
 
 ## 3. Wiring Schematics & Pin Connections
 
-### A. ESP32 Threat Siren & OLED Display
+### A. ESP32 DevKit V1 (Wi-Fi + Bluetooth) with Dual LEDs (White & Red), OLED & Buzzer
+
+If you have an **ESP32 Development Board (ESP32 DevKit V1 with Wi-Fi and Bluetooth)**, use this exact pinout table and the firmware at [`hardware/esp32_devkit_threat_siren.ino`](./esp32_devkit_threat_siren.ino):
+
+| ESP32 DevKit V1 Pin | GPIO | Target Component | Component Pin | Notes & Resistor |
+| :--- | :--- | :--- | :--- | :--- |
+| **3V3** | 3.3V Power | OLED SSD1306 | **VCC** | 3.3V logic & power |
+| **GND** | Ground | OLED + LEDs + Buzzer | **GND / (-)** | Connect to breadboard common ground rail |
+| **D21** | GPIO 21 | OLED SSD1306 | **SDA** | Default ESP32 I2C Data line |
+| **D22** | GPIO 22 | OLED SSD1306 | **SCL** | Default ESP32 I2C Clock line |
+| **D18** | GPIO 18 | **White LED** | **Anode (+ / Long leg)** | In series with **220Ω - 330Ω** resistor. Indicates **System Armed / Normal Guard** |
+| **D19** | GPIO 19 | **Red LED** | **Anode (+ / Long leg)** | In series with **220Ω - 330Ω** resistor. Strobes rapidly on **Threat / Attack** |
+| **D23** | GPIO 23 | **Active Buzzer** | **(+) or Signal** | Emits tactical audio warning sirens on attack |
+
+#### Breadboard Wiring Summary for ESP32 DevKit V1:
+1. **Common Ground**: Connect the ESP32 `GND` pin to the blue (-) ground rail on your breadboard.
+2. **0.96" I2C OLED (SSD1306 128x64)**:
+   - `VCC` $\rightarrow$ ESP32 `3V3`
+   - `GND` $\rightarrow$ Breadboard Ground rail
+   - `SDA` $\rightarrow$ ESP32 `D21` (GPIO 21)
+   - `SCL` $\rightarrow$ ESP32 `D22` (GPIO 22)
+3. **White LED (Normal Standby Guard)**:
+   - Long leg (+) $\rightarrow$ 220Ω or 330Ω resistor $\rightarrow$ ESP32 `D18` (GPIO 18)
+   - Short leg (-) $\rightarrow$ Breadboard Ground rail
+4. **Red LED (Breach Alarm Strobe)**:
+   - Long leg (+) $\rightarrow$ 220Ω or 330Ω resistor $\rightarrow$ ESP32 `D19` (GPIO 19)
+   - Short leg (-) $\rightarrow$ Breadboard Ground rail
+5. **Active Buzzer (Audio Alert Siren)**:
+   - Positive pin (+) $\rightarrow$ ESP32 `D23` (GPIO 23)
+   - Negative pin (-) $\rightarrow$ Breadboard Ground rail
+
+---
+
+### B. Legacy ESP32 Setup with WS2812B NeoPixel
 
 | ESP32 Pin | Target Device | Target Pin | Description |
 | :--- | :--- | :--- | :--- |
@@ -62,7 +95,7 @@ This guide details how to integrate **physical IoT and embedded hardware** with 
 
 ---
 
-### B. NodeMCU (ESP8266) with Dual LEDs (White & Red), OLED & Buzzer
+### C. NodeMCU (ESP8266) with Dual LEDs (White & Red), OLED & Buzzer
 
 If you have a **NodeMCU ESP8266** with discrete **White LED**, **Red LED**, **0.96" OLED**, and an **Active Buzzer**, use this exact wiring table and the firmware at `hardware/nodemcu_threat_siren.ino`:
 
@@ -97,7 +130,27 @@ If you have a **NodeMCU ESP8266** with discrete **White LED**, **Red LED**, **0.
 
 ## 4. Flashing & Running the Firmware
 
-### Option 1: Uploading to NodeMCU (ESP8266)
+### Option 1: Uploading to ESP32 DevKit V1 (White & Red LEDs, OLED, Buzzer)
+1. Open the [Arduino IDE](https://www.arduino.cc/en/software).
+2. Install the ESP32 Board package via *Tools > Board > Boards Manager*:
+   - Search for **esp32** by *Espressif Systems* and click **Install**.
+3. Install required libraries (*Sketch > Include Library > Manage Libraries*):
+   - `Adafruit SSD1306`
+   - `Adafruit GFX Library`
+   - `ArduinoJson` (v6 or v7)
+4. Open the sketch: [`hardware/esp32_devkit_threat_siren.ino`](./esp32_devkit_threat_siren.ino).
+5. Under *Tools*, configure:
+   - **Board**: `DOIT ESP32 DEVKIT V1` (or `ESP32 Dev Module`)
+   - **Upload Speed**: `115200` (or `921600`)
+   - **Port**: Select your ESP32 COM port (e.g., `COM3` on Windows or `/dev/ttyUSB0` on Linux)
+6. Click **Upload** (➡️ arrow icon).
+   - *Pro Tip*: If Arduino IDE shows `Connecting........_____.....`, press and hold the **BOOT** button on the ESP32 for 1-2 seconds until the percentage counter appears, then release it.
+7. Once uploaded:
+   - The **White LED** will illuminate steady ON (System Armed).
+   - The **OLED** will display `TRAPWIRE DEFENDER - STATUS: ARMED & READY`.
+   - The **Red LED** and **Buzzer** remain silent until an attack arrives.
+
+### Option 2: Uploading to NodeMCU (ESP8266)
 1. Open the [Arduino IDE](https://www.arduino.cc/en/software).
 2. Add ESP8266 Board URL in *File > Preferences > Additional Boards Manager URLs*:
    ```

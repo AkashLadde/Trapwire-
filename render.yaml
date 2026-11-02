@@ -9,3 +9,4 @@ services:
         value: 3.11.9
       - key: STANDALONE_ATTACKER
         value: "false"
+
