@@ -268,13 +268,13 @@
           {% endfor %}
           {% else %}
           <tr class="empty-state-row">
-            <td colspan="12" style="text-align: center; padding: 48px 16px; color: var(--text-muted);">
-              <div style="font-size: 32px; margin-bottom: 12px; opacity: 0.7;">📦</div>
-              <div style="font-weight: 600; font-size: 15px; color: var(--text-primary); margin-bottom: 6px;">No Customer Order Data on Record</div>
-              <div style="font-size: 13px; max-width: 480px; margin: 0 auto 16px; line-height: 1.5; color: var(--text-muted);">
+            <td colspan="12" style="text-align: center; padding: 20px 16px; color: var(--text-muted);">
+              <div style="font-size: 24px; margin-bottom: 6px; opacity: 0.7;">📦</div>
+              <div style="font-weight: 600; font-size: 14px; color: var(--text-primary); margin-bottom: 4px;">No Customer Order Data on Record</div>
+              <div style="font-size: 12px; max-width: 480px; margin: 0 auto 10px; line-height: 1.4; color: var(--text-muted);">
                 All synthetic customer records have been purged. As an administrator, you have full privilege to add authentic orders to this production database.
               </div>
-              <button class="btn btn-primary" id="emptyAddOrderBtn" onclick="openOrderModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:7px 18px; background:#2563eb; color:#fff; border-radius:6px; font-weight:600; cursor:pointer; border:none;">
+              <button class="btn btn-primary" id="emptyAddOrderBtn" onclick="openOrderModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:6px 14px; background:#2563eb; color:#fff; border-radius:6px; font-weight:600; cursor:pointer; border:none;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 + Add Customer Order
               </button>

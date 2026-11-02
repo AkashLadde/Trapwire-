@@ -136,13 +136,13 @@ html, body {
 }
 
 .kali-login-card {
-  width: 460px;
+  width: 440px;
   max-width: 94vw;
   background: rgba(13, 6, 10, 0.94);
   border: 1px solid var(--atk-border-bright);
   box-shadow: 0 0 60px rgba(255, 0, 59, 0.25), 0 20px 50px rgba(0, 0, 0, 0.9);
-  border-radius: 12px;
-  padding: 32px 28px;
+  border-radius: 10px;
+  padding: 20px 22px;
   position: relative;
   z-index: 10;
   backdrop-filter: blur(16px);
@@ -174,14 +174,14 @@ html, body {
 
 /* Spiderweb glowing badge in login card */
 .kali-spiderweb-badge {
-  width: 74px;
-  height: 74px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   background: radial-gradient(circle, rgba(255, 0, 59, 0.25), transparent 70%);
   border: 2px solid rgba(255, 0, 59, 0.6);
   box-shadow: 0 0 25px rgba(255, 0, 59, 0.5);
@@ -194,19 +194,19 @@ html, body {
 }
 
 .kali-spiderweb-badge .emblem-img {
-  width: 58px;
-  height: 58px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   object-fit: cover;
   filter: contrast(1.2) brightness(1.1);
 }
 
 .kali-login-title {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.12em;
   color: #fff;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .glitch-text {
@@ -219,7 +219,7 @@ html, body {
 .kali-login-sub {
   font-size: 11px;
   color: var(--atk-text-muted);
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   letter-spacing: 0.04em;
 }
 
@@ -228,9 +228,9 @@ html, body {
   width: 100%;
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid var(--atk-border);
-  padding: 8px 10px;
+  padding: 6px 9px;
   border-radius: 6px;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
   text-align: left;
 }
 
@@ -376,7 +376,7 @@ html, body {
 }
 
 .kali-login-foot {
-  margin-top: 20px;
+  margin-top: 10px;
   font-size: 10.5px;
   color: var(--atk-text-dim);
   display: flex;
@@ -402,12 +402,12 @@ html, body {
    TOP BAR
    ========================================================================== */
 .atk-topbar {
-  height: 48px;
-  min-height: 48px;
+  height: 38px;
+  min-height: 38px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 12px;
   background: #080306;
   border-bottom: 1px solid var(--atk-border);
   z-index: 10;
@@ -559,18 +559,18 @@ html, body {
 .atk-workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: 260px 1fr 290px;
-  gap: 10px;
-  padding: 10px;
+  grid-template-columns: 240px 1fr 270px;
+  gap: 6px;
+  padding: 6px;
   overflow: hidden;
-  height: calc(100vh - 48px - 28px);
+  height: calc(100vh - 38px - 24px);
 }
 
 /* Common Panel Styling */
 .atk-panel {
   background: var(--atk-panel);
   border: 1px solid var(--atk-border);
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -578,15 +578,15 @@ html, body {
 }
 
 .atk-panel-header {
-  height: 36px;
-  min-height: 36px;
+  height: 30px;
+  min-height: 30px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 8px;
   background: #0a0408;
   border-bottom: 1px solid var(--atk-border);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -623,19 +623,19 @@ html, body {
 .atk-fs-tree {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 4px;
 }
 
 .fs-group {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .fs-dir-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
-  font-size: 12px;
+  gap: 5px;
+  padding: 2px 5px;
+  font-size: 11.5px;
   font-weight: 600;
   color: #ef4444;
   cursor: pointer;
@@ -647,23 +647,23 @@ html, body {
 }
 
 .fs-dir-title svg {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
 }
 
 .fs-file-list {
-  padding-left: 18px;
+  padding-left: 14px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .fs-file-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 3px 6px;
-  font-size: 11.5px;
+  padding: 2px 5px;
+  font-size: 11px;
   color: var(--atk-text-muted);
   cursor: pointer;
   border-radius: 4px;
@@ -696,22 +696,22 @@ html, body {
 }
 
 .atk-quick-commands {
-  padding: 8px 10px;
+  padding: 5px 8px;
   background: #080306;
   border-top: 1px solid var(--atk-border);
 }
 
 .atk-quick-title {
-  font-size: 10px;
+  font-size: 9.5px;
   text-transform: uppercase;
   color: var(--atk-text-dim);
-  margin-bottom: 6px;
+  margin-bottom: 3px;
 }
 
 .atk-quick-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  gap: 3px;
 }
 
 .atk-quick-btn {
@@ -719,8 +719,8 @@ html, body {
   border: 1px solid var(--atk-border);
   color: var(--atk-text-muted);
   font-family: inherit;
-  font-size: 10.5px;
-  padding: 5px 6px;
+  font-size: 10px;
+  padding: 3px 5px;
   border-radius: 4px;
   cursor: pointer;
   text-align: left;
@@ -752,26 +752,26 @@ html, body {
 }
 
 .terminal-header {
-  height: 34px;
-  min-height: 34px;
+  height: 28px;
+  min-height: 28px;
   background: #0a0407;
   border-bottom: 1px solid var(--atk-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 8px;
   user-select: none;
 }
 
 .terminal-controls {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
 }
 
 .term-dot {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   cursor: pointer;
   opacity: 0.85;
@@ -786,7 +786,7 @@ html, body {
 .dot-green { background: #27c93f; border: 1px solid #1aab29; }
 
 .terminal-title {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   color: #e2e8f0;
   display: flex;
@@ -795,13 +795,13 @@ html, body {
 }
 
 .term-spider-icon {
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .terminal-tools {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .term-tool-btn {
@@ -809,12 +809,12 @@ html, body {
   border: 1px solid transparent;
   color: var(--atk-text-muted);
   cursor: pointer;
-  padding: 3px 6px;
+  padding: 2px 5px;
   border-radius: 4px;
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 10.5px;
+  font-size: 10px;
   font-family: inherit;
 }
 
@@ -829,14 +829,14 @@ html, body {
    ========================================================================== */
 .terminal-body {
   flex: 1;
-  padding: 14px 16px;
+  padding: 8px 12px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   position: relative;
   color: #f1f5f9;
-  font-size: 12.5px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.45;
   
   /* HIGH-TECH RED CYBER SPIDERWEB BACKGROUND */
   background: 
@@ -939,7 +939,7 @@ html, body {
 .terminal-input-row {
   display: flex;
   align-items: center;
-  padding: 9px 14px;
+  padding: 6px 10px;
   background: #070305;
   border-top: 1px solid var(--atk-border);
   position: relative;
@@ -953,7 +953,7 @@ html, body {
   font-weight: 600;
   white-space: nowrap;
   user-select: none;
-  margin-right: 8px;
+  margin-right: 6px;
 }
 
 .prompt-user { color: #10b981; }
@@ -969,7 +969,7 @@ html, body {
   outline: none;
   color: #fff;
   font-family: var(--atk-font-mono);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
 }
 
@@ -980,8 +980,8 @@ html, body {
 .term-suggestions {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
+  gap: 5px;
+  padding: 3px 8px;
   background: #050204;
   border-top: 1px solid rgba(255, 255, 255, 0.04);
   overflow-x: auto;
@@ -992,8 +992,8 @@ html, body {
   border: 1px solid var(--atk-border);
   color: var(--atk-text-muted);
   font-family: inherit;
-  font-size: 10.5px;
-  padding: 3px 8px;
+  font-size: 10px;
+  padding: 2px 7px;
   border-radius: 12px;
   cursor: pointer;
   white-space: nowrap;
@@ -1012,36 +1012,36 @@ html, body {
 .atk-sidebar-right {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   overflow-y: auto;
 }
 
 .telemetry-card {
-  padding: 10px 12px;
+  padding: 6px 10px;
   background: var(--atk-panel);
   border: 1px solid var(--atk-border);
   border-radius: 6px;
 }
 
 .telemetry-card-title {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   text-transform: uppercase;
   color: var(--atk-text-muted);
-  margin-bottom: 8px;
+  margin-bottom: 5px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .telemetry-card-title svg {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   color: var(--atk-red);
 }
 
 .metric-row {
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 }
 
 .metric-label-val {
@@ -1081,7 +1081,7 @@ html, body {
 .target-spec-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   font-size: 11px;
 }
 
@@ -1089,7 +1089,7 @@ html, body {
   display: flex;
   justify-content: space-between;
   border-bottom: 1px dashed var(--atk-border);
-  padding-bottom: 4px;
+  padding-bottom: 3px;
 }
 
 .target-spec-item span {
@@ -1116,16 +1116,16 @@ html, body {
 .attack-stepper {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
 }
 
 .step-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  gap: 6px;
+  font-size: 10.5px;
   color: var(--atk-text-dim);
-  padding: 4px 6px;
+  padding: 2px 5px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.01);
 }
@@ -1142,14 +1142,14 @@ html, body {
 }
 
 .step-circle {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: 1px solid var(--atk-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8.5px;
+  font-size: 8px;
   flex-shrink: 0;
 }
 
@@ -1170,15 +1170,15 @@ html, body {
    BOTTOM FOOTER
    ========================================================================== */
 .atk-footer {
-  height: 28px;
-  min-height: 28px;
+  height: 24px;
+  min-height: 24px;
   background: #050204;
   border-top: 1px solid var(--atk-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  font-size: 11px;
+  padding: 0 12px;
+  font-size: 10.5px;
   color: var(--atk-text-muted);
   z-index: 10;
 }
@@ -1186,7 +1186,7 @@ html, body {
 .atk-footer-left, .atk-footer-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .footer-item {

@@ -27,8 +27,10 @@ import argparse
 import requests
 
 try:
-    import serial
-    import serial.tools.list_ports
+    if sys.stdout.encoding != 'utf-8':
+        sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
     HAS_SERIAL = True
 except ImportError:
     HAS_SERIAL = False
