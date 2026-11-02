@@ -36,7 +36,7 @@ if (ordersTab) ordersTab.classList.remove("hidden");
 // ---- Orders table: search + status filter + value sort ----
 const ordersTable = document.getElementById("ordersTable");
 if (ordersTable) {
-  const rows = Array.from(ordersTable.querySelectorAll("tbody tr"));
+  const rows = Array.from(ordersTable.querySelectorAll("tbody tr:not(.empty-state-row)"));
   const tableSearch = document.getElementById("tableSearch");
   const statusChips = document.querySelectorAll("#statusChips .filter-chip");
   const tableCount = document.getElementById("tableCount");
@@ -44,11 +44,17 @@ if (ordersTable) {
   let activeStatus = "all";
 
   function applyFilters() {
+    if (rows.length === 0) {
+      if (tableCount) tableCount.textContent = "0 records";
+      if (noResultsMsg) noResultsMsg.style.display = "none";
+      return;
+    }
     const q = (tableSearch?.value || "").trim().toLowerCase();
     let visible = 0;
     rows.forEach(row => {
       const matchesStatus = activeStatus === "all" || row.dataset.status === activeStatus;
-      const matchesSearch = !q || row.dataset.search.includes(q);
+      const searchStr = row.dataset.search || "";
+      const matchesSearch = !q || searchStr.includes(q);
       const show = matchesStatus && matchesSearch;
       row.style.display = show ? "" : "none";
       if (show) visible += 1;

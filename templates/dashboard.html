@@ -229,6 +229,7 @@
           </tr>
         </thead>
         <tbody>
+          {% if records and records|length > 0 %}
           {% for r in records %}
           <tr data-status="{{ r.status }}" data-search="{{ r.customer_name|lower }} {{ r.order_id|lower }}" data-value="{{ r.order_value }}">
             <td class="mono">{{ r.order_id }}</td>
@@ -249,6 +250,17 @@
             <td class="mono">₹{{ "{:,}".format(r.order_value) }}</td>
           </tr>
           {% endfor %}
+          {% else %}
+          <tr class="empty-state-row">
+            <td colspan="11" style="text-align: center; padding: 48px 16px; color: var(--text-muted);">
+              <div style="font-size: 32px; margin-bottom: 12px; opacity: 0.7;">📦</div>
+              <div style="font-weight: 600; font-size: 15px; color: var(--text-primary); margin-bottom: 6px;">No Customer Order Data on Record</div>
+              <div style="font-size: 13px; max-width: 480px; margin: 0 auto; line-height: 1.5; color: var(--text-muted);">
+                All synthetic customer records have been purged. Zero personal data or unconsented customer PII is retained on this node in accordance with Section 6 of the DPDP Act, 2023.
+              </div>
+            </td>
+          </tr>
+          {% endif %}
         </tbody>
       </table>
       </div>
@@ -363,7 +375,7 @@
             </tr>
             <tr>
               <td><b>Customer Loyalty Engine</b></td><td>TrapWire Retail</td>
-              <td><div class="cust-cell"><span class="cust-avatar">R</span>Rahul Nair</div></td>
+              <td><div class="cust-cell"><span class="cust-avatar">R</span>Rahul Deshmukh</div></td>
               <td class="mono">20 Dec 2026</td><td class="mono">₹26,40,000</td>
               <td><div class="progress-track"><div class="progress-fill" style="width:33%;"></div></div></td>
               <td><span class="status-pill status-shipped">On Track</span></td>
@@ -420,7 +432,7 @@
             <tr><td><div class="cust-cell"><span class="cust-avatar">A</span>Aditi Rao</div></td><td class="mono">aditi.rao@trapwire.co.in</td><td>Security Lead</td><td><span class="status-pill status-delivered">Active</span></td><td class="mono">Today, 9:14 AM</td></tr>
             <tr><td><div class="cust-cell"><span class="cust-avatar">K</span>Karan Mehta</div></td><td class="mono">karan.mehta@trapwire.co.in</td><td>Manager</td><td><span class="status-pill status-delivered">Active</span></td><td class="mono">Today, 8:02 AM</td></tr>
             <tr><td><div class="cust-cell"><span class="cust-avatar">S</span>Sana Iqbal</div></td><td class="mono">sana.iqbal@trapwire.co.in</td><td>SOC Analyst</td><td><span class="status-pill status-delivered">Active</span></td><td class="mono">Yesterday, 6:45 PM</td></tr>
-            <tr><td><div class="cust-cell"><span class="cust-avatar">R</span>Rahul Nair</div></td><td class="mono">rahul.nair@trapwire.co.in</td><td>Viewer</td><td><span class="status-pill status-processing">Invited</span></td><td class="mono">—</td></tr>
+            <tr><td><div class="cust-cell"><span class="cust-avatar">R</span>Rahul Deshmukh</div></td><td class="mono">rahul.deshmukh@trapwire.co.in</td><td>Viewer</td><td><span class="status-pill status-processing">Invited</span></td><td class="mono">—</td></tr>
             <tr><td><div class="cust-cell"><span class="cust-avatar">P</span>Priya Das</div></td><td class="mono">priya.das@trapwire.co.in</td><td>Compliance Officer</td><td><span class="status-pill status-delivered">Active</span></td><td class="mono">2 days ago</td></tr>
             <tr><td><div class="cust-cell"><span class="cust-avatar">V</span>Vikram Shah</div></td><td class="mono">vikram.shah@trapwire.co.in</td><td>Analyst</td><td><span class="status-pill status-pending">Suspended</span></td><td class="mono">12 days ago</td></tr>
           </tbody>

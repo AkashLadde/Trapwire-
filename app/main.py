@@ -44,7 +44,7 @@ app.include_router(dpb.router)
 if lab.LAB_ENABLED:  # Phase 2: real-attack honeypot lab (TRAPWIRE_LAB_MODE=0 disables)
     app.include_router(lab.router)
 
-REAL_CUSTOMERS = data.generate_customers(14)
+REAL_CUSTOMERS = []
 
 VPN_NODES = [
     {"label": "Netherlands - Amsterdam", "fake_ip": "185.220.101.45"},
@@ -328,24 +328,15 @@ def company_dashboard(request: Request):
 
     suspicious = request.session.get("suspicious", False)
 
-    if suspicious:
-        records = data.generate_honeypot_view(n=14)
-        for r in records:
-            r["aadhaar_display"] = data.mask_aadhaar(r["aadhaar"])
-            r["pan_display"] = data.mask_pan(r["pan"])
-            r["card_display"] = data.mask_card(r["card_last4"])
-            r["phone_display"] = r["phone"]
-            r["email_display"] = r["email"]
-    else:
-        records = []
-        for r in REAL_CUSTOMERS:
-            rr = dict(r)
-            rr["aadhaar_display"] = data.mask_aadhaar(r["aadhaar"])
-            rr["pan_display"] = data.mask_pan(r["pan"])
-            rr["card_display"] = data.mask_card(r["card_last4"])
-            rr["phone_display"] = r["phone"]
-            rr["email_display"] = r["email"]
-            records.append(rr)
+    records = []
+    for r in REAL_CUSTOMERS:
+        rr = dict(r)
+        rr["aadhaar_display"] = data.mask_aadhaar(r["aadhaar"])
+        rr["pan_display"] = data.mask_pan(r["pan"])
+        rr["card_display"] = data.mask_card(r["card_last4"])
+        rr["phone_display"] = r["phone"]
+        rr["email_display"] = r["email"]
+        records.append(rr)
 
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
