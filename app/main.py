@@ -427,10 +427,12 @@ async def api_delete_order(order_id: str, request: Request):
 
 
 @app.get("/api/alerts")
+@app.get("/api/alerts/recent")
 def api_alerts(request: Request):
-    if not request.session.get("authenticated") or request.session.get("suspicious"):
-        return JSONResponse(list(reversed(state.ALERTS[-50:])))
-    return JSONResponse(list(reversed(state.ALERTS[-50:])))
+    alerts_list = list(reversed(state.ALERTS[-50:]))
+    if request.url.path.endswith("/recent"):
+        return JSONResponse({"alerts": alerts_list})
+    return JSONResponse(alerts_list)
 
 
 @app.post("/api/attacker-session-event")
@@ -793,6 +795,8 @@ def logout(request: Request):
 
 
 @app.websocket("/ws/alerts")
+@app.websocket("/api/threat-stream")
+@app.websocket("/ws/threat-stream")
 async def ws_alerts(websocket: WebSocket):
     await websocket.accept()
     state.ADMIN_SOCKETS.append(websocket)

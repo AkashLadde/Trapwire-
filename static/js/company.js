@@ -709,6 +709,27 @@ window.resetSocDemo = async function() {
   }
 };
 
+window.triggerHardwareTest = async function() {
+  const btn = document.getElementById("hwTestBtn");
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch("/api/hardware/trigger-test", { method: "POST" });
+    const data = await res.json();
+    if (data.ok) {
+      if (typeof showToast === "function") {
+        showToast("⚡ Physical Siren Test Broadcast Sent to ESP32 Hardware Node!");
+      }
+    }
+  } catch (err) {
+    console.error("Hardware test error:", err);
+    if (typeof showToast === "function") {
+      showToast("Hardware test error: " + err.message);
+    }
+  } finally {
+    if (btn) setTimeout(() => { btn.disabled = false; }, 2000);
+  }
+};
+
 // 7. Statutory 72-Hour Compliance Countdown Clock
 function init72HourClock() {
   const hEl = document.getElementById("clockHours");

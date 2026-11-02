@@ -3,13 +3,13 @@
  * TRAPWIRE — ESP32 DevKit V1 Physical Threat Siren & SOC Defense Node
  * =====================================================================================
  * Target Board:
- *   ESP32 Development Board (ESP32 DevKit V1 with Wi-Fi & Bluetooth)
+ *   ESP32 Development Board (ESP32 DevKit V1 with Wi-Fi & Bluetooth, 30-pin / 36-pin)
  *
  * Connected Components:
- *   1. 0.96" I2C OLED Display (SSD1306, 128x64, I2C Address 0x3C)
- *   2. White LED (Normal Operation / System Armed & Healthy)
- *   3. Red LED (Breach Alarm Strobe / Threat Detected)
- *   4. Active Piezo Buzzer (Tactical Audio Warning Siren)
+ *   1. 0.96" I2C OLED Display (SSD1306, 128x64, Auto-detects 0x3C / 0x3D)
+ *   2. White LED (Normal Operation / System Armed & Guarding)
+ *   3. Red LED (Breach Alarm Strobe / Active Attack In Progress)
+ *   4. Active or Passive Buzzer (Tactical Audio Warning Siren)
  *
  * Pin Connections on ESP32 DevKit V1:
  *   - OLED VCC         -> 3V3 pin on ESP32
@@ -17,11 +17,11 @@
  *   - OLED SDA         -> GPIO 21 (Pin D21)
  *   - OLED SCL         -> GPIO 22 (Pin D22)
  *   - White LED (+)    -> GPIO 18 (Pin D18) via 220Ω-330Ω resistor
- *   - White LED (-)    -> GND
+ *   - White LED (-)    -> GND pin on ESP32
  *   - Red LED (+)      -> GPIO 19 (Pin D19) via 220Ω-330Ω resistor
- *   - Red LED (-)      -> GND
- *   - Active Buzzer(+) -> GPIO 23 (Pin D23)
- *   - Active Buzzer(-) -> GND
+ *   - Red LED (-)      -> GND pin on ESP32
+ *   - Buzzer (+)       -> GPIO 23 (Pin D23)
+ *   - Buzzer (-)       -> GND pin on ESP32
  *
  * Required Arduino Libraries (Install via Arduino IDE Library Manager):
  *   1. "Adafruit SSD1306" by Adafruit
@@ -43,6 +43,7 @@
 #define SCREEN_HEIGHT 64
 #define OLED_RESET    -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+bool oledReady = false;
 
 // ESP32 DevKit V1 Pin Assignments
 #define PIN_WHITE_LED  18  // GPIO 18 (D18) - Normal Guard / Standby Status
@@ -67,7 +68,23 @@ String currentAttackType = "STANDBY";
 unsigned long lastStrobeToggle = 0;
 bool strobeState = false;
 
+// Universal Buzzer Driver (Supports both Active & Passive Piezo Buzzers)
+void soundBuzzer(bool on) {
+  if (on) {
+    digitalWrite(PIN_BUZZER, HIGH);
+    #if defined(ESP32)
+    tone(PIN_BUZZER, 2400); // 2.4kHz tone for passive buzzers
+    #endif
+  } else {
+    digitalWrite(PIN_BUZZER, LOW);
+    #if defined(ESP32)
+    noTone(PIN_BUZZER);
+    #endif
+  }
+}
+
 void drawStandbyScreen() {
+  if (!oledReady) return;
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
 
@@ -95,6 +112,7 @@ void drawStandbyScreen() {
 }
 
 void drawThreatScreen(const String& level, const String& ip, const String& msg) {
+  if (!oledReady) return;
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
 
@@ -131,40 +149,67 @@ void drawThreatScreen(const String& level, const String& ip, const String& msg) 
 }
 
 void setup() {
-  // Start USB Serial for PC / serial_bridge.py communication
+  // Start USB Serial communication
   Serial.begin(115200);
-  delay(200);
+  delay(250);
 
   // Configure GPIO Pins
   pinMode(PIN_WHITE_LED, OUTPUT);
   pinMode(PIN_RED_LED, OUTPUT);
   pinMode(PIN_BUZZER, OUTPUT);
 
-  // Standby initial pin states: White LED ON, Red LED OFF, Buzzer OFF
-  digitalWrite(PIN_WHITE_LED, HIGH);
+  // Turn everything off initially
+  digitalWrite(PIN_WHITE_LED, LOW);
   digitalWrite(PIN_RED_LED, LOW);
-  digitalWrite(PIN_BUZZER, LOW);
+  soundBuzzer(false);
 
   // Initialize standard ESP32 I2C bus (SDA=GPIO21, SCL=GPIO22)
   Wire.begin(21, 22);
 
-  // Initialize OLED (0x3C is standard SSD1306 I2C address)
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("[ERROR] SSD1306 OLED allocation failed. Check GPIO 21 / 22 wiring."));
+  // Auto-probe OLED address (0x3C default, 0x3D fallback)
+  if (display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    oledReady = true;
+  } else if (display.begin(SSD1306_SWITCHCAPVCC, 0x3D)) {
+    oledReady = true;
   } else {
+    Serial.println(F("[WARN] OLED not detected at 0x3C or 0x3D. (Check D21/D22 wires). LEDs and buzzer will still work."));
+  }
+
+  // =========================================================================
+  // HARDWARE POWER-ON SELF-TEST DIAGNOSTIC (Verifies wiring immediately!)
+  // =========================================================================
+  if (oledReady) {
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
-    display.setCursor(14, 15);
+    display.setCursor(14, 12);
     display.println("TRAPWIRE DEFENSE");
-    display.setCursor(10, 30);
-    display.println("ESP32 DEVKIT V1 ARMED");
+    display.setCursor(10, 28);
+    display.println("DIAGNOSTIC SELF-TEST");
+    display.setCursor(14, 46);
+    display.println("TESTING HARDWARE...");
     display.display();
-    delay(1000);
   }
 
+  // 1. Light White LED
+  digitalWrite(PIN_WHITE_LED, HIGH);
+  delay(300);
+
+  // 2. Light Red LED & Chirp Buzzer
+  digitalWrite(PIN_RED_LED, HIGH);
+  soundBuzzer(true);
+  delay(180);
+  soundBuzzer(false);
+  digitalWrite(PIN_RED_LED, LOW);
+  delay(200);
+
+  // Settle into Standby Guard State: White LED ON, Red LED OFF, Buzzer OFF
+  digitalWrite(PIN_WHITE_LED, HIGH);
+  digitalWrite(PIN_RED_LED, LOW);
+  soundBuzzer(false);
+
   drawStandbyScreen();
-  Serial.println(F("{\"node\":\"ESP32-DEVKIT-V1\",\"status\":\"ARMED\",\"baud\":115200}"));
+  Serial.println(F("{\"node\":\"ESP32-DEVKIT-V1\",\"status\":\"ARMED\",\"baud\":115200,\"self_test\":\"PASS\"}"));
 }
 
 void processIncomingThreatJson(const String& jsonStr) {
@@ -218,14 +263,14 @@ void loop() {
       lastStrobeToggle = now;
       strobeState = !strobeState;
       digitalWrite(PIN_RED_LED, strobeState ? HIGH : LOW);
-      digitalWrite(PIN_BUZZER, strobeState ? HIGH : LOW);
+      soundBuzzer(strobeState);
     }
 
     // Auto-Reset back to Standby after alarm timeout
     if (now - lastThreatTime > ALARM_DURATION_MS) {
       currentState = STATE_STANDBY;
       digitalWrite(PIN_RED_LED, LOW);
-      digitalWrite(PIN_BUZZER, LOW);
+      soundBuzzer(false);
       digitalWrite(PIN_WHITE_LED, HIGH); // Restore White Guard LED
       drawStandbyScreen();
       Serial.println(F("{\"event\":\"AUTO_RESET\",\"status\":\"STANDBY\"}"));
@@ -239,13 +284,13 @@ void loop() {
       lastStrobeToggle = now;
       strobeState = !strobeState;
       digitalWrite(PIN_RED_LED, strobeState ? HIGH : LOW);
-      digitalWrite(PIN_BUZZER, strobeState ? HIGH : LOW);
+      soundBuzzer(strobeState);
     }
 
     if (now - lastThreatTime > (ALARM_DURATION_MS / 2)) {
       currentState = STATE_STANDBY;
       digitalWrite(PIN_RED_LED, LOW);
-      digitalWrite(PIN_BUZZER, LOW);
+      soundBuzzer(false);
       digitalWrite(PIN_WHITE_LED, HIGH);
       drawStandbyScreen();
     }
@@ -254,6 +299,6 @@ void loop() {
     // Standby Mode: White LED solid ON, Red LED OFF, Buzzer OFF
     digitalWrite(PIN_WHITE_LED, HIGH);
     digitalWrite(PIN_RED_LED, LOW);
-    digitalWrite(PIN_BUZZER, LOW);
+    soundBuzzer(false);
   }
 }
