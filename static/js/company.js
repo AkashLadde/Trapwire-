@@ -44,14 +44,15 @@ if (ordersTable) {
   let activeStatus = "all";
 
   function applyFilters() {
-    if (rows.length === 0) {
+    const currentRows = Array.from(ordersTable.querySelectorAll("tbody tr:not(.empty-state-row)"));
+    if (currentRows.length === 0) {
       if (tableCount) tableCount.textContent = "0 records";
       if (noResultsMsg) noResultsMsg.style.display = "none";
       return;
     }
     const q = (tableSearch?.value || "").trim().toLowerCase();
     let visible = 0;
-    rows.forEach(row => {
+    currentRows.forEach(row => {
       const matchesStatus = activeStatus === "all" || row.dataset.status === activeStatus;
       const searchStr = row.dataset.search || "";
       const matchesSearch = !q || searchStr.includes(q);
@@ -59,9 +60,10 @@ if (ordersTable) {
       row.style.display = show ? "" : "none";
       if (show) visible += 1;
     });
-    if (tableCount) tableCount.textContent = `${visible} of ${rows.length} records`;
+    if (tableCount) tableCount.textContent = `${visible} of ${currentRows.length} records`;
     if (noResultsMsg) noResultsMsg.style.display = visible === 0 ? "block" : "none";
   }
+  window.refreshOrdersFilter = applyFilters;
 
   tableSearch?.addEventListener("input", applyFilters);
 
@@ -84,8 +86,9 @@ if (ordersTable) {
   document.getElementById("sortValue")?.addEventListener("click", () => {
     valueSortAsc = !valueSortAsc;
     const tbody = ordersTable.querySelector("tbody");
-    const sorted = rows.slice().sort((a, b) => {
-      const av = parseFloat(a.dataset.value), bv = parseFloat(b.dataset.value);
+    const currentRows = Array.from(ordersTable.querySelectorAll("tbody tr:not(.empty-state-row)"));
+    const sorted = currentRows.slice().sort((a, b) => {
+      const av = parseFloat(a.dataset.value) || 0, bv = parseFloat(b.dataset.value) || 0;
       return valueSortAsc ? av - bv : bv - av;
     });
     sorted.forEach(r => tbody.appendChild(r));
@@ -977,3 +980,225 @@ document.addEventListener("DOMContentLoaded", () => {
     setupAlertWebSocket();
   }
 });
+
+// ==========================================================================
+// ADMIN PRIVILEGE: ADD & DELETE CUSTOMER ORDERS
+// ==========================================================================
+function setupOrderAdminControls() {
+  const openBtns = [
+    document.getElementById("openAddOrderBtn"),
+    document.getElementById("openAddOrderHeaderBtn"),
+    document.getElementById("emptyAddOrderBtn")
+  ];
+  const modal = document.getElementById("addOrderModal");
+  const closeBtn = document.getElementById("closeAddOrderModal");
+  const cancelBtn = document.getElementById("cancelAddOrderModal");
+  const form = document.getElementById("addOrderForm");
+  const table = document.getElementById("ordersTable");
+  const tbody = table ? table.querySelector("tbody") : null;
+
+  function openOrderModal() {
+    if (modal) modal.classList.remove("hidden");
+  }
+  function closeOrderModal() {
+    if (modal) modal.classList.add("hidden");
+    if (form) form.reset();
+  }
+
+  openBtns.forEach(btn => {
+    btn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      openOrderModal();
+    });
+  });
+
+  closeBtn?.addEventListener("click", closeOrderModal);
+  cancelBtn?.addEventListener("click", closeOrderModal);
+
+  modal?.addEventListener("click", (e) => {
+    if (e.target === modal) closeOrderModal();
+  });
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const saveBtn = document.getElementById("saveAddOrderBtn");
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving Order...";
+    }
+
+    const payload = {
+      customer_name: document.getElementById("ordCustomer")?.value.trim(),
+      email: document.getElementById("ordEmail")?.value.trim(),
+      phone: document.getElementById("ordPhone")?.value.trim(),
+      item: document.getElementById("ordItem")?.value.trim(),
+      order_value: parseFloat(document.getElementById("ordValue")?.value || 0),
+      status: document.getElementById("ordStatus")?.value || "Processing",
+      card_last4: document.getElementById("ordCard")?.value.trim(),
+      aadhaar: document.getElementById("ordAadhaar")?.value.trim(),
+      pan: document.getElementById("ordPan")?.value.trim(),
+      address: document.getElementById("ordAddress")?.value.trim()
+    };
+
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (data.ok && data.record) {
+        insertOrderRow(data.record);
+        updateOrderStats();
+        closeOrderModal();
+        if (typeof showToast === "function") {
+          showToast(`Order ${data.record.order_id} added successfully.`);
+        }
+      } else {
+        alert("Failed to add order: " + (data.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Error creating order:", err);
+      alert("Network error creating order.");
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save Customer Order";
+      }
+    }
+  });
+
+  function insertOrderRow(r) {
+    if (!tbody) return;
+    const emptyRow = tbody.querySelector(".empty-state-row");
+    if (emptyRow) emptyRow.remove();
+
+    const initial = (r.customer_name || "?").trim()[0]?.toUpperCase() || "?";
+    const statusLower = (r.status || "processing").toLowerCase();
+    const valFormatted = Number(r.order_value || 0).toLocaleString("en-IN");
+
+    const tr = document.createElement("tr");
+    tr.dataset.status = r.status;
+    tr.dataset.search = `${(r.customer_name || "").toLowerCase()} ${(r.order_id || "").toLowerCase()}`;
+    tr.dataset.value = r.order_value;
+
+    tr.innerHTML = `
+      <td class="mono">${r.order_id}</td>
+      <td>
+        <div class="cust-cell">
+          <span class="cust-avatar">${initial}</span>
+          ${r.customer_name}
+        </div>
+      </td>
+      <td class="mono">${r.phone_display || r.phone || "—"}</td>
+      <td>${r.email_display || r.email || "—"}</td>
+      <td class="mono">${r.aadhaar_display || "—"}</td>
+      <td class="mono">${r.pan_display || "—"}</td>
+      <td class="mono">${r.card_display || "—"}</td>
+      <td>${r.address || "—"}</td>
+      <td>${r.item}</td>
+      <td><span class="status-pill status-${statusLower}">${r.status}</span></td>
+      <td class="mono">₹${valFormatted}</td>
+      <td style="text-align:right;">
+        <button class="btn-delete-order" data-order-id="${r.order_id}" title="Delete Order" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:4px 8px; border-radius:4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </td>
+    `;
+
+    tbody.insertBefore(tr, tbody.firstChild);
+    attachDeleteHandler(tr.querySelector(".btn-delete-order"));
+    if (typeof window.refreshOrdersFilter === "function") window.refreshOrdersFilter();
+  }
+
+  function attachDeleteHandler(btn) {
+    if (!btn) return;
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const orderId = btn.dataset.orderId;
+      if (!confirm(`Are you sure you want to delete order ${orderId}?`)) return;
+
+      try {
+        const res = await fetch(`/api/orders/${orderId}`, { method: "DELETE" });
+        const data = await res.json();
+        if (data.ok) {
+          const row = btn.closest("tr");
+          row?.remove();
+          updateOrderStats();
+          if (typeof window.refreshOrdersFilter === "function") window.refreshOrdersFilter();
+          if (typeof showToast === "function") {
+            showToast(`Order ${orderId} deleted.`);
+          }
+        }
+      } catch (err) {
+        console.error("Error deleting order:", err);
+      }
+    });
+  }
+
+  document.querySelectorAll(".btn-delete-order").forEach(attachDeleteHandler);
+
+  function updateOrderStats() {
+    const rows = Array.from(tbody ? tbody.querySelectorAll("tr:not(.empty-state-row)") : []);
+    const count = rows.length;
+
+    const tableCount = document.getElementById("tableCount");
+    if (tableCount) tableCount.textContent = `${count} records`;
+
+    const statCards = document.querySelectorAll("#tab-orders .stats-row .stat-card");
+    if (statCards[0]) {
+      const numEl = statCards[0].querySelector(".stat-num");
+      if (numEl) numEl.textContent = count;
+    }
+
+    let totalVal = 0;
+    let deliveredCount = 0;
+    rows.forEach(r => {
+      const v = parseFloat(r.dataset.value) || 0;
+      totalVal += v;
+      if (r.dataset.status === "Delivered") deliveredCount++;
+    });
+
+    if (statCards[1]) {
+      const valEl = statCards[1].querySelector(".stat-num");
+      if (valEl) valEl.textContent = `₹${totalVal.toLocaleString("en-IN")}`;
+    }
+
+    if (statCards[2]) {
+      const rateEl = statCards[2].querySelector(".stat-num");
+      const rate = count > 0 ? ((deliveredCount / count) * 100).toFixed(1) : "0";
+      if (rateEl) rateEl.textContent = `${rate}%`;
+      const trendEl = statCards[2].querySelector(".stat-trend");
+      if (trendEl) trendEl.textContent = `${deliveredCount} of ${count} delivered`;
+    }
+
+    if (count === 0 && tbody && !tbody.querySelector(".empty-state-row")) {
+      tbody.innerHTML = `
+        <tr class="empty-state-row">
+          <td colspan="12" style="text-align: center; padding: 48px 16px; color: var(--text-muted);">
+            <div style="font-size: 32px; margin-bottom: 12px; opacity: 0.7;">📦</div>
+            <div style="font-weight: 600; font-size: 15px; color: var(--text-primary); margin-bottom: 6px;">No Customer Order Data on Record</div>
+            <div style="font-size: 13px; max-width: 480px; margin: 0 auto 16px; line-height: 1.5; color: var(--text-muted);">
+              All synthetic customer records have been purged. As an administrator, you have full privilege to add authentic orders to this production database.
+            </div>
+            <button class="btn btn-primary" id="emptyAddOrderBtn" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:7px 18px; background:#2563eb; color:#fff; border-radius:6px; font-weight:600; cursor:pointer; border:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              + Add Customer Order
+            </button>
+          </td>
+        </tr>
+      `;
+      document.getElementById("emptyAddOrderBtn")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        openOrderModal();
+      });
+    }
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", setupOrderAdminControls);
+} else {
+  setupOrderAdminControls();
+}

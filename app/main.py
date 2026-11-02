@@ -44,7 +44,7 @@ app.include_router(dpb.router)
 if lab.LAB_ENABLED:  # Phase 2: real-attack honeypot lab (TRAPWIRE_LAB_MODE=0 disables)
     app.include_router(lab.router)
 
-REAL_CUSTOMERS = []
+REAL_CUSTOMERS = database.db_get_orders()
 
 VPN_NODES = [
     {"label": "Netherlands - Amsterdam", "fake_ip": "185.220.101.45"},
@@ -344,6 +344,83 @@ def company_dashboard(request: Request):
         "suspicious": suspicious,
         "username": request.session.get("username", "admin")
     })
+
+
+@app.get("/api/orders")
+def api_get_orders(request: Request):
+    """Retrieve orders (accessible to authenticated sessions)."""
+    global REAL_CUSTOMERS
+    return JSONResponse({"ok": True, "orders": REAL_CUSTOMERS})
+
+
+@app.post("/api/orders")
+async def api_add_order(request: Request):
+    """Admin privilege to add genuine customer orders to company dashboard."""
+    if not request.session.get("authenticated"):
+        return JSONResponse({"ok": False, "error": "Unauthorized: Administrator login required"}, status_code=401)
+
+    try:
+        data_body = await request.json()
+    except Exception:
+        form = await request.form()
+        data_body = dict(form)
+
+    customer_name = (data_body.get("customer_name") or "").strip()
+    if not customer_name:
+        return JSONResponse({"ok": False, "error": "Customer name is required"}, status_code=400)
+
+    import random, string
+    order_id = data_body.get("order_id") or ("ORD" + "".join(random.choices(string.digits, k=6)))
+    email = (data_body.get("email") or "").strip()
+    phone = (data_body.get("phone") or "").strip()
+    aadhaar = (data_body.get("aadhaar") or "").strip()
+    pan = (data_body.get("pan") or "").strip()
+    card_last4 = (data_body.get("card_last4") or "").strip()
+    address = (data_body.get("address") or "").strip()
+    item = (data_body.get("item") or "General Merchandise").strip()
+    try:
+        order_value = float(data_body.get("order_value") or 0)
+    except (ValueError, TypeError):
+        order_value = 0.0
+    status = (data_body.get("status") or "Processing").strip()
+
+    record = {
+        "order_id": order_id,
+        "customer_name": customer_name,
+        "phone": phone,
+        "email": email,
+        "aadhaar": aadhaar,
+        "pan": pan,
+        "card_last4": card_last4,
+        "address": address,
+        "item": item,
+        "order_value": order_value,
+        "status": status,
+        "aadhaar_display": data.mask_aadhaar(aadhaar),
+        "pan_display": data.mask_pan(pan),
+        "card_display": data.mask_card(card_last4),
+        "phone_display": phone or "—",
+        "email_display": email or "—",
+    }
+
+    # Persist to database & memory
+    database.db_save_order(record)
+    global REAL_CUSTOMERS
+    REAL_CUSTOMERS.insert(0, record)
+
+    return JSONResponse({"ok": True, "record": record})
+
+
+@app.delete("/api/orders/{order_id}")
+async def api_delete_order(order_id: str, request: Request):
+    """Admin privilege to remove an order record."""
+    if not request.session.get("authenticated"):
+        return JSONResponse({"ok": False, "error": "Unauthorized: Administrator login required"}, status_code=401)
+
+    global REAL_CUSTOMERS
+    database.db_delete_order(order_id)
+    REAL_CUSTOMERS = [r for r in REAL_CUSTOMERS if r.get("order_id") != order_id]
+    return JSONResponse({"ok": True, "order_id": order_id})
 
 
 @app.get("/api/alerts")

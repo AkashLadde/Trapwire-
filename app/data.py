@@ -87,15 +87,23 @@ def generate_customers(n=14):
 
 
 def mask_aadhaar(value: str) -> str:
-    return "XXXX-XXXX-" + value.split("-")[-1]
+    if not value:
+        return "—"
+    last = value.split("-")[-1] if "-" in value else value[-4:]
+    return f"XXXX-XXXX-{last}"
 
 
 def mask_pan(value: str) -> str:
-    return "XXXXX" + value[5:]
+    if not value:
+        return "—"
+    return "XXXXX" + (value[5:] if len(value) > 5 else value[-4:])
 
 
 def mask_card(value: str) -> str:
-    return "**** **** **** " + value
+    if not value:
+        return "—"
+    last = value[-4:] if len(value) >= 4 else value
+    return "**** **** **** " + last
 
 
 def truncate_hash(value: str, length: int = 16) -> str:

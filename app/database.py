@@ -282,3 +282,91 @@ def db_save_sms(recipient: str, message: str, status: str = "DISPATCHED"):
         (recipient, message, status, sent_at)
     )
     conn.commit()
+
+
+def db_save_order(order: Dict[str, Any]):
+    order_val = float(order.get("order_value") or 0.0)
+    if DB_ENGINE == "mysql":
+        conn = get_mysql_connection()
+        if conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """INSERT INTO orders 
+                    (order_id, customer_name, phone, email, aadhaar, pan, address, card_last4, item, order_value, status) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE 
+                    customer_name=%s, phone=%s, email=%s, aadhaar=%s, pan=%s, address=%s, card_last4=%s, item=%s, order_value=%s, status=%s""",
+                    (
+                        order["order_id"], order.get("customer_name", ""), order.get("phone", ""),
+                        order.get("email", ""), order.get("aadhaar", ""), order.get("pan", ""),
+                        order.get("address", ""), order.get("card_last4", ""), order.get("item", ""),
+                        order_val, order.get("status", "Pending"),
+                        order.get("customer_name", ""), order.get("phone", ""),
+                        order.get("email", ""), order.get("aadhaar", ""), order.get("pan", ""),
+                        order.get("address", ""), order.get("card_last4", ""), order.get("item", ""),
+                        order_val, order.get("status", "Pending")
+                    )
+                )
+            conn.commit()
+            conn.close()
+            return
+    conn = get_sqlite_connection()
+    c = conn.cursor()
+    c.execute(
+        """INSERT OR REPLACE INTO orders 
+        (order_id, customer_name, phone, email, aadhaar, pan, address, card_last4, item, order_value, status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            order["order_id"], order.get("customer_name", ""), order.get("phone", ""),
+            order.get("email", ""), order.get("aadhaar", ""), order.get("pan", ""),
+            order.get("address", ""), order.get("card_last4", ""), order.get("item", ""),
+            order_val, order.get("status", "Pending")
+        )
+    )
+    conn.commit()
+
+
+def db_delete_order(order_id: str):
+    if DB_ENGINE == "mysql":
+        conn = get_mysql_connection()
+        if conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM orders WHERE order_id = %s", (order_id,))
+            conn.commit()
+            conn.close()
+            return
+    conn = get_sqlite_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM orders WHERE order_id = ?", (order_id,))
+    conn.commit()
+
+
+def db_get_orders() -> List[Dict[str, Any]]:
+    rows = []
+    if DB_ENGINE == "mysql":
+        conn = get_mysql_connection()
+        if conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT order_id, customer_name, phone, email, aadhaar, pan, address, card_last4, item, order_value, status FROM orders ORDER BY id DESC")
+                res = cur.fetchall()
+                for r in res:
+                    rows.append({
+                        "order_id": r[0], "customer_name": r[1], "phone": r[2], "email": r[3],
+                        "aadhaar": r[4], "pan": r[5], "address": r[6], "card_last4": r[7],
+                        "item": r[8], "order_value": float(r[9] or 0), "status": r[10] or "Processing"
+                    })
+            conn.close()
+            return rows
+    try:
+        conn = get_sqlite_connection()
+        c = conn.cursor()
+        c.execute("SELECT order_id, customer_name, phone, email, aadhaar, pan, address, card_last4, item, order_value, status FROM orders ORDER BY id DESC")
+        for r in c.fetchall():
+            rows.append({
+                "order_id": r[0], "customer_name": r[1], "phone": r[2], "email": r[3],
+                "aadhaar": r[4], "pan": r[5], "address": r[6], "card_last4": r[7],
+                "item": r[8], "order_value": float(r[9] or 0), "status": r[10] or "Processing"
+            })
+    except Exception as e:
+        print(f"[DB] Error loading orders: {e}")
+    return rows

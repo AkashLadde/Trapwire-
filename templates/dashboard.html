@@ -190,9 +190,13 @@
           <div class="stat-trend flat">{{ delivered_count }} of {{ records|length }} delivered</div>
         </div>
       </div>
-      <div class="stat-card stat-action">
-        <button class="btn btn-primary full" id="exportBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <div class="stat-card stat-action" style="display:flex; flex-direction:column; justify-content:center; gap:8px;">
+        <button class="btn btn-primary full" id="openAddOrderBtn" style="background:#2563eb; color:#fff; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Customer Order
+        </button>
+        <button class="btn btn-dark full" id="exportBtn" style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:12px; padding:6px 12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export Customer Data
         </button>
       </div>
@@ -201,7 +205,13 @@
     <div class="panel-card">
       <div class="panel-card-head">
         <h2>Recent Customer Orders</h2>
-        {% if not suspicious %}<span class="tag tag-safe">DPDP Masking Active</span>{% else %}<span class="tag tag-live">Decoy Honeypot Active</span>{% endif %}
+        <div style="display:flex; align-items:center; gap:10px;">
+          {% if not suspicious %}<span class="tag tag-safe">DPDP Masking Active</span>{% else %}<span class="tag tag-live">Decoy Honeypot Active</span>{% endif %}
+          <button class="btn btn-primary" id="openAddOrderHeaderBtn" style="display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:5px 12px; background:#2563eb; color:#fff; border-radius:6px; font-weight:600; cursor:pointer; border:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            + Add Order
+          </button>
+        </div>
       </div>
 
       <div class="table-toolbar">
@@ -226,6 +236,7 @@
             <th>Order ID</th><th>Customer</th><th>Phone</th><th>Email</th>
             <th>Aadhaar</th><th>PAN</th><th>Card</th><th>Address</th><th>Item</th>
             <th>Status</th><th class="sortable" id="sortValue">Value <span class="sort-ico">⇅</span></th>
+            <th style="text-align:right;">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -248,16 +259,25 @@
             <td>{{ r.item }}</td>
             <td><span class="status-pill status-{{ r.status|lower }}">{{ r.status }}</span></td>
             <td class="mono">₹{{ "{:,}".format(r.order_value) }}</td>
+            <td style="text-align:right;">
+              <button class="btn-delete-order" data-order-id="{{ r.order_id }}" title="Delete Order" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding:4px 8px; border-radius:4px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </td>
           </tr>
           {% endfor %}
           {% else %}
           <tr class="empty-state-row">
-            <td colspan="11" style="text-align: center; padding: 48px 16px; color: var(--text-muted);">
+            <td colspan="12" style="text-align: center; padding: 48px 16px; color: var(--text-muted);">
               <div style="font-size: 32px; margin-bottom: 12px; opacity: 0.7;">📦</div>
               <div style="font-weight: 600; font-size: 15px; color: var(--text-primary); margin-bottom: 6px;">No Customer Order Data on Record</div>
-              <div style="font-size: 13px; max-width: 480px; margin: 0 auto; line-height: 1.5; color: var(--text-muted);">
-                All synthetic customer records have been purged. Zero personal data or unconsented customer PII is retained on this node in accordance with Section 6 of the DPDP Act, 2023.
+              <div style="font-size: 13px; max-width: 480px; margin: 0 auto 16px; line-height: 1.5; color: var(--text-muted);">
+                All synthetic customer records have been purged. As an administrator, you have full privilege to add authentic orders to this production database.
               </div>
+              <button class="btn btn-primary" id="emptyAddOrderBtn" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:7px 18px; background:#2563eb; color:#fff; border-radius:6px; font-weight:600; cursor:pointer; border:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                + Add Customer Order
+              </button>
             </td>
           </tr>
           {% endif %}
@@ -966,6 +986,72 @@
 
 {% if not suspicious %}
 <!-- MODALS -->
+<!-- ADD CUSTOMER ORDER MODAL -->
+<div class="modal-overlay hidden" id="addOrderModal">
+  <div class="modal-box" style="max-width:540px;">
+    <div class="modal-head">
+      <h3>Add New Customer Order</h3>
+      <button class="modal-close" id="closeAddOrderModal">&times;</button>
+    </div>
+    <p style="font-size:12px; color:var(--text-muted); margin:4px 0 16px;">
+      Admin privilege active. Sensitive PII (Aadhaar, PAN, Card) is automatically masked under the DPDP Act, 2023.
+    </p>
+    <form id="addOrderForm">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div style="grid-column: span 2;">
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Customer Full Name *</label>
+          <input type="text" id="ordCustomer" required placeholder="e.g. Vikramaditya Sen" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Email Address *</label>
+          <input type="email" id="ordEmail" required placeholder="e.g. vikram@example.com" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Phone Number *</label>
+          <input type="text" id="ordPhone" required placeholder="e.g. +91 98201 12345" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Item / Product Name *</label>
+          <input type="text" id="ordItem" required placeholder="e.g. Secure Hardware Token" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Order Value (₹) *</label>
+          <input type="number" id="ordValue" required min="1" placeholder="e.g. 18500" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Fulfillment Status</label>
+          <select id="ordStatus" style="width:100%; box-sizing:border-box; padding:8px; border-radius:6px; border:1px solid #CBD5E1; background:#fff;">
+            <option value="Delivered">Delivered</option>
+            <option value="Shipped">Shipped</option>
+            <option value="Processing" selected>Processing</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Card Last 4 Digits</label>
+          <input type="text" id="ordCard" maxlength="4" placeholder="e.g. 9812" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Aadhaar (Optional)</label>
+          <input type="text" id="ordAadhaar" placeholder="e.g. 5432-8765-1098" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">PAN Number (Optional)</label>
+          <input type="text" id="ordPan" placeholder="e.g. ABCDE1234F" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div style="grid-column: span 2;">
+          <label style="font-size:12px; font-weight:600; margin-bottom:4px; display:block;">Delivery Address</label>
+          <input type="text" id="ordAddress" placeholder="e.g. 45, Brigade Road, Bengaluru" style="width:100%; box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button type="button" class="btn btn-dark" id="cancelAddOrderModal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveAddOrderBtn" style="background:#2563eb; color:#fff; font-weight:600;">Save Customer Order</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="newProjectModal">
   <div class="modal-box">
     <div class="modal-head"><h3>Create New Project</h3><button class="modal-close" id="closeProjectModal">&times;</button></div>
