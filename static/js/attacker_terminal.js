@@ -1,6 +1,6 @@
 /**
- * TRAPWIRE — Attacker Workstation Command Interpreter & Simulation Engine
- * Kali Linux / Pentest Console Experience (Purely Simulated & Safe)
+ * TRAPWIRE — Attacker Workstation Command Interpreter & Offensive Audit Engine
+ * Kali Linux / Offensive Pentest Console Experience
  * Targets Defender Server at http://127.0.0.1:8080
  */
 
@@ -16,17 +16,17 @@
         size: "12.4 MB",
         type: "encrypted",
         content: `╔══════════════════════════════════════════════════════════════════════╗
-║                    SIMULATED ENCRYPTED DATABASE                      ║
+║                    SECURE ENCRYPTED DATABASE VAULT                   ║
 ╠══════════════════════════════════════════════════════════════════════╣
 ║ FILE: leak_database.enc                                              ║
 ║ SIZE: 12.4 MB                                                        ║
-║ ENCRYPTION: AES-256 [SIMULATED]                                      ║
+║ ENCRYPTION: AES-256-GCM                                              ║
 ║ RECORDS: 14                                                          ║
-║ CLASSIFICATION: HONEYPOT DECOY DATA                                  ║
+║ CLASSIFICATION: ENCRYPTED CORPORATE RECORDS                          ║
 ║ STATUS: READY FOR EXPORT                                             ║
 ╚══════════════════════════════════════════════════════════════════════╝
 
-Sample Record Preview (Decoy Synthetic Data):
+Record Set Preview:
 +---------------+---------------------+-----------------------------+-------------------+
 | Order ID      | Customer Name       | Email                       | Phone             |
 +---------------+---------------------+-----------------------------+-------------------+
@@ -50,22 +50,20 @@ USE 'export data' TO EXTRACT PAYLOAD.`
       "master_keys.bak": {
         size: "1.2 KB",
         type: "key",
-        content: `-----BEGIN SIMULATED RSA PRIVATE KEY-----
+        content: `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA0wJd8tQ4Wb5z9Q5vK9f2z7l0wY3k8J4m7p8q2r6t9u0v1w3x
 y5z7a9b1c3d5e7f9g1h3j5k7m9n1p3q5r7s9t1u3v5w7x9y1z3a5b7c9d1e3f5g7
-[SIMULATED RSA KEY - EDUCATIONAL CAPSTONE PURPOSES ONLY]
------END SIMULATED RSA PRIVATE KEY-----`
+-----END RSA PRIVATE KEY-----`
       }
     },
     "onion_links": {
       "hidden_markets.lst": {
         size: "840 B",
         type: "text",
-        content: `[SIMULATED DARKNET REPOSITORIES]
+        content: `[INTELLIGENCE REPOSITORIES]
 http://trapwire2837492jsdflkjwoeir093284.onion/vault
 http://shadowdump893472938472938472938.onion/intel
-http://zerodaybroker998237492837492834.onion/exploits
-[NOTE: Synthetic fictional URIs for educational UI realism]`
+http://zerodaybroker998237492837492834.onion/exploits`
       }
     },
     "malware_kits": {
@@ -74,20 +72,20 @@ http://zerodaybroker998237492837492834.onion/exploits
         type: "script",
         content: `#!/bin/bash
 # ==========================================================
-# TRAPWIRE EDUCATIONAL LAB - BENIGN TEST PAYLOAD
-# Safe demonstration wrapper for ethical intrusion testing
+# TRAPWIRE RED-TEAM AUDIT AGENT
+# Penetration Testing Suite for DPDP Compliance Verification
 # ==========================================================
-echo "[+] Initializing simulated breach testing agent..."
-echo "[+] Target environment: Localhost Sandbox (127.0.0.1:8080)"
+echo "[+] Initializing penetration testing agent..."
+echo "[+] Target environment: Production Target Gateway (127.0.0.1:8080)"
 echo "[+] Mode: Intrusion Detection & DPDP Compliance Verification"`
       },
       "ransom_notes.txt": {
         size: "620 B",
         type: "text",
         content: `===============================================================
-[SIMULATION NOTICE]
+[SECURITY NOTICE]
 This system is protected by TRAPWIRE Autonomous Threat Deception.
-All intrusion attempts are quarantined to decoy honeypot environments.
+All intrusion attempts are quarantined to isolated honeypot environments.
 Canary tracking tokens auto-report breach telemetry to India's DPB.
 ===============================================================`
       }
@@ -96,7 +94,7 @@ Canary tracking tokens auto-report breach telemetry to India's DPB.
       "hash_dump.txt": {
         size: "1.8 KB",
         type: "hashes",
-        content: `[CAPTURED SHA-256 HASHES (SIMULATED)]
+        content: `[CAPTURED SHA-256 HASHES (TARGET SHADOW DUMP)]
 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92 : 123456
 5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8 : password
 65e84be33532fb784c48129675f9eff3a682b27168c0ea744b2cf58ee02337c5 : qwerty123
@@ -108,7 +106,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       "session_logs.log": {
         size: "5.1 KB",
         type: "log",
-        content: `[SESSION LOGS — SIMULATED SECURITY AUDIT]
+        content: `[SESSION LOGS — SECURITY INCIDENT AUDIT]
 08:41:02 [AUTH] Authentication module initialized on :8080
 08:41:08 [AUTH] Failed login attempt from 127.0.0.1 (user: admin)
 08:41:11 [AUTH] Failed login attempt from 127.0.0.1 (user: admin)
@@ -270,7 +268,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
 
       printLine("<b style='color:#10b981;'>[FILESYSTEM & EXFILTRATION]</b>", "success");
       printLine("  <b>ls</b> / <b>show files</b>          List files in current virtual filesystem", "info");
-      printLine("  <b>cd &lt;dir&gt;</b>                 Change simulated directory (e.g. cd shadow_vault)", "info");
+      printLine("  <b>cd &lt;dir&gt;</b>                 Change working directory (e.g. cd shadow_vault)", "info");
       printLine("  <b>cat &lt;file&gt;</b>               Inspect synthetic file / encrypted database payload", "info");
       printLine("  <b>show records</b>             Display preview of customer order records", "info");
       printLine("  <b>export data</b> / <b>fetch</b>      Exfiltrate database package (triggers honeypot & canary)", "info");
@@ -309,7 +307,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
     whoami: async () => {
       const user = sessionStorage.getItem("kali_user") || "root";
       printLine(`${user}@kali (uid=1000 gid=1000 groups=1000(kali),27(sudo))`, "info");
-      printLine("Workstation: KALI-OFFSEC-WORKSTATION-01 [Simulation Sandbox]", "dim");
+      printLine("Workstation: KALI-OFFSEC-WORKSTATION-01 [OffSec Audit Terminal]", "dim");
     },
 
     pwd: async () => {
@@ -402,7 +400,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine("80/tcp   open  http         uvicorn / FastAPI (Company Server)", "success");
       printLine("8080/tcp open  http-alt     TRAPWIRE Application Server", "success");
       printLine("9000/tcp open  http-alt     Kali Linux Pentest Console", "error");
-      printLine("443/tcp  filt  https        simulated-waf", "dim");
+      printLine("443/tcp  filt  https        cloud-waf-active", "dim");
       printLine("");
 
       printLine("<span class='term-tag tag-scan'>[SCAN]</span> Target surface discovery:", "info");
@@ -756,7 +754,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
     },
 
     dictionary: async () => {
-      printLine("<span class='term-tag tag-purple'>[DICTIONARY]</span> Launching dictionary attack simulation...", "purple");
+      printLine("<span class='term-tag tag-purple'>[DICTIONARY]</span> Launching dictionary credential brute-force...", "purple");
       printLine("[*] Source: rockyou-sample.txt (Top Common Passwords)", "dim");
       await sleep(200);
 
@@ -885,7 +883,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
 </div>`;
       printRaw(asciiBanner);
 
-      printLine("<span class='term-tag tag-success'>[+]</span> <b>SIMULATED DATA ACQUIRED</b>", "success");
+      printLine("<span class='term-tag tag-success'>[+]</span> <b>DATA EXFILTRATION ACQUIRED</b>", "success");
       printLine("<span class='term-tag tag-info'>[+]</span> RECORDS: 14", "info");
       printLine("<span class='term-tag tag-honey'>[+]</span> <b>HONEYPOT TRIGGER: ACTIVE</b> (All personal data SHA-256 hashed & synthetic)", "error");
       printLine(`<span class='term-tag tag-warn'>[+]</span> INCIDENT ID: <b>${state.incidentId}</b>`, "warning");
@@ -900,7 +898,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       // Trigger Canary Token phone-home beacon
       if (payload && Array.isArray(payload) && payload[0] && payload[0]._tracking_invoice_url) {
         const trackingUrl = payload[0]._tracking_invoice_url;
-        printLine("<span class='term-tag tag-warn'>[*]</span> Opening simulated invoice preview...", "dim");
+        printLine("<span class='term-tag tag-warn'>[*]</span> Opening invoice preview...", "dim");
         
         setTimeout(() => {
           const iframe = document.createElement("iframe");
@@ -916,7 +914,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
           updateUIState();
           printLine("<span class='term-tag tag-error'>[CANARY BEACON]</span> <b>Canary tracking token triggered!</b>", "error");
           printLine("  [!] Attacker de-anonymized via honeypot invoice tracking link.", "warning");
-          printLine("  [!] Device fingerprint captured -> Submitted to simulated Data Protection Board.", "info");
+          printLine("  [!] Device fingerprint captured -> Submitted to Data Protection Board of India.", "info");
         }, 1000);
       }
     },

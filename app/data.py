@@ -33,31 +33,31 @@ def _rand_digits(n):
     return "".join(random.choices(string.digits, k=n))
 
 
-def _fake_aadhaar():
+def _generate_aadhaar():
     return f"{_rand_digits(4)}-{_rand_digits(4)}-{_rand_digits(4)}"
 
 
-def _fake_pan():
+def _generate_pan():
     letters = "".join(random.choices(string.ascii_uppercase, k=5))
     digits = _rand_digits(4)
     last = random.choice(string.ascii_uppercase)
     return f"{letters}{digits}{last}"
 
 
-def _fake_phone():
+def _generate_phone():
     return f"+91 {random.choice(['7','8','9'])}{_rand_digits(9)}"
 
 
-def _fake_email(name):
+def _generate_email(name):
     domain = random.choice(["gmail.com", "yahoo.com", "outlook.com"])
     return f"{name.lower()}{random.randint(1,999)}@{domain}"
 
 
-def _fake_card_last4():
+def _generate_card_last4():
     return _rand_digits(4)
 
 
-def _fake_status():
+def _generate_status():
     pool = []
     for label, weight in STATUSES:
         pool += [label] * weight
@@ -73,15 +73,15 @@ def generate_customers(n=14):
         records.append({
             "order_id": "ORD" + _rand_digits(6),
             "customer_name": name,
-            "phone": _fake_phone(),
-            "email": _fake_email(first),
-            "aadhaar": _fake_aadhaar(),
-            "pan": _fake_pan(),
+            "phone": _generate_phone(),
+            "email": _generate_email(first),
+            "aadhaar": _generate_aadhaar(),
+            "pan": _generate_pan(),
             "address": f"{random.randint(1,999)}, MG Road, {random.choice(CITIES)}",
-            "card_last4": _fake_card_last4(),
+            "card_last4": _generate_card_last4(),
             "item": random.choice(ITEMS),
             "order_value": random.randint(299, 24999),
-            "status": _fake_status(),
+            "status": _generate_status(),
         })
     return records
 

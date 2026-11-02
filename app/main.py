@@ -109,8 +109,8 @@ def client_ip(request: Request) -> str:
     return host
 
 
-def mock_geolocate(ip: str) -> dict:
-    """Best-effort real ISP & Geo lookup; falls back gracefully."""
+def resolve_ip_geolocation(ip: str) -> dict:
+    """Real-time ISP & Geolocation intelligence lookup with graceful fallback."""
     pub_ip, pub_geo = get_real_network_intel()
     if ip in ("127.0.0.1", "localhost", "::1", "unknown", pub_ip):
         return pub_geo
@@ -382,7 +382,7 @@ async def attacker_session_event(request: Request):
     raw_ip = body.get("ip") or client_ip(request)
     # Clean simulated IP display strings if present
     clean_ip = raw_ip.split(" ")[0].strip()
-    geo = mock_geolocate(clean_ip)
+    geo = resolve_ip_geolocation(clean_ip)
     
     user = body.get("user", "kali")
     tool = body.get("tool", "Kali Pentest Console")
@@ -512,7 +512,7 @@ async def api_export(request: Request):
         payload = data.generate_honeypot_export(base, token, n=14)
 
         ip = client_ip(request)
-        geo = mock_geolocate(ip)
+        geo = resolve_ip_geolocation(ip)
         state.BREACH.update({
             "download_ip": ip,
             "download_isp": geo["isp"],
@@ -543,7 +543,7 @@ async def api_export(request: Request):
 async def canary_hit(token: str, request: Request):
     """Canary tracking link phone-home beacon."""
     ip = client_ip(request)
-    geo = mock_geolocate(ip)
+    geo = resolve_ip_geolocation(ip)
     hit = {
         "token": token,
         "ip": ip,
@@ -629,7 +629,7 @@ async def canary_details(token: str, request: Request):
 @app.post("/api/report")
 def api_report(request: Request):
     if not state.BREACH:
-        # Create a mock breach record if none exists for manual testing
+        # Initialize baseline breach record if none exists for manual reporting
         state.BREACH.update({
             "incident_id": "INC-" + uuid.uuid4().hex[:8].upper(),
             "detected_at": time.time() - 3600,

@@ -8,7 +8,7 @@ and captures physical intruder network scans, forwarding live telemetry directly
 to the TrapWire Central Defender Server.
 
 Usage:
-    python hardware/raspberry_pi_node.py --server http://127.0.0.1:8000 --node-id PI-HONEYPOT-01
+    python hardware/raspberry_pi_node.py --server http://127.0.0.1:8080 --node-id PI-HONEYPOT-01
 =====================================================================================
 """
 
@@ -19,7 +19,7 @@ import threading
 import argparse
 import requests
 
-DEFAULT_SERVER = "http://127.0.0.1:8000"
+DEFAULT_SERVER = "http://127.0.0.1:8080"
 NODE_ID = "PI-HONEYPOT-01"
 LOCATION = "Ground Floor Server Rack (Bidar Node)"
 

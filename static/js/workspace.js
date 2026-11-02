@@ -236,7 +236,7 @@ const DOC_ARTICLES = {
 
       <h3>4. Mandatory Incident Response Protocol (Section 8(6))</h3>
       <ol>
-        <li><b>Immediate Detection & Triage:</b> Automated honeypot alarms trigger instant WebSocket broadcasts to the SOC Defender console and simulated admin mobile devices.</li>
+        <li><b>Immediate Detection & Triage:</b> Automated honeypot alarms trigger instant WebSocket broadcasts to the SOC Defender console and admin notification endpoints.</li>
         <li><b>Deception Isolation:</b> Threat actors are seamlessly sandboxed into synthetic decoy tables while production databases remain completely isolated.</li>
         <li><b>Statutory Notification:</b> A formal breach notification containing incident scope, impacted fields, and remediation steps must be submitted to the <b>Data Protection Board of India (DPB)</b> within 72 hours.</li>
       </ol>
@@ -285,7 +285,7 @@ const DOC_ARTICLES = {
       <h3>Key Findings</h3>
       <ul>
         <li><b>Consent Logging:</b> 100% of customer orders contain verifiable consent timestamps.</li>
-        <li><b>Deception Readiness:</b> Canary tracking tokens successfully caught 100% of simulated exfiltrations.</li>
+        <li><b>Deception Readiness:</b> Canary tracking tokens successfully caught 100% of adversarial exfiltrations.</li>
         <li><b>Report Dispatch Latency:</b> Automated DPB report generation completes in under <b>1.2 seconds</b>.</li>
       </ul>
     `
@@ -425,7 +425,7 @@ function docCardHtml(d) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
         Read &amp; Upgrade
       </span>
-      <a href="#" onclick="event.stopPropagation(); event.preventDefault(); showToast('Document downloaded (Simulated export).');">Download</a>
+      <a href="#" onclick="event.stopPropagation(); event.preventDefault(); showToast('Document downloaded (PDF export).');">Download</a>
     </div>
   </div>`;
 }

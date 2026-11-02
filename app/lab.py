@@ -113,48 +113,51 @@ def configure(alert_sink=None, report_sink=None):
 # --------------------------------------------------------------------------
 
 DECOY_PRODUCTS = [
-    (1, "Wireless Earbuds Pro", 2999, "Decoy product - bluetooth earbuds"),
-    (2, "Running Shoes X1", 1999, "Decoy product - sports shoes"),
-    (3, "Smart Watch Fit", 4999, "Decoy product - fitness watch"),
-    (4, "Laptop Bag Urban", 1499, "Decoy product - laptop backpack"),
-    (5, "Bluetooth Speaker Boom", 2499, "Decoy product - party speaker"),
-    (6, "Cotton Kurta Set", 1299, "Decoy product - ethnic wear"),
+    (1, "Wireless Earbuds Pro", 2999, "Active Noise Cancelling Bluetooth 5.3 Earbuds with 40h Battery"),
+    (2, "Apex Running Shoes X1", 1999, "Lightweight breathable mesh athletic running shoes"),
+    (3, "Pulse Smart Watch Fit", 4999, "1.43-inch AMOLED Display Heart Rate & SpO2 Fitness Tracker"),
+    (4, "Urban Laptop Backpack", 1499, "Water-resistant 15.6-inch padded compartment commuter pack"),
+    (5, "BassBoom Bluetooth Speaker", 2499, "24W Portable Stereo Sound with IPX7 Waterproofing"),
+    (6, "Classic Cotton Kurta Set", 1299, "Premium pure cotton traditional formal ethnic wear"),
 ]
 
 # These are the rows a successful SQLi UNION extraction will dump.
-# Usernames/passwords are deliberately fake and labelled DECOY.
 DECOY_USERS = [
-    (1, "decoy_admin", "DECOY-admin-pass-123", "admin"),
-    (2, "decoy_manager", "DECOY-manager-pass-456", "manager"),
-    (3, "decoy_guest", "DECOY-guest-pass-789", "guest"),
-    (4, "decoy_auditor", "DECOY-auditor-pass-000", "auditor"),
+    (1, "sys_admin", "DECOY-vault-root-9821a", "admin"),
+    (2, "database_mgr", "DECOY-prod-db-token-551x", "manager"),
+    (3, "api_service", "DECOY-service-mesh-442p", "service"),
+    (4, "compliance_lead", "DECOY-dpdp-auditor-110z", "auditor"),
 ]
 
 DECOY_CUSTOMERS = [
-    (1, "Decoy Aarav Sharma", "decoy.aarav@example.invalid", "+91 9000000001", "XXXX-XXXX-1001"),
-    (2, "Decoy Meera Iyer", "decoy.meera@example.invalid", "+91 9000000002", "XXXX-XXXX-1002"),
-    (3, "Decoy Rohan Patil", "decoy.rohan@example.invalid", "+91 9000000003", "XXXX-XXXX-1003"),
-    (4, "Decoy Sanya Khan", "decoy.sanya@example.invalid", "+91 9000000004", "XXXX-XXXX-1004"),
-    (5, "Decoy Kabir Rao", "decoy.kabir@example.invalid", "+91 9000000005", "XXXX-XXXX-1005"),
-    (6, "Decoy Diya Nair", "decoy.diya@example.invalid", "+91 9000000006", "XXXX-XXXX-1006"),
+    (1, "Aarav Sharma", "aarav.sharma@trapwire.co.in", "+91 98201 54321", "XXXX-XXXX-1001"),
+    (2, "Meera Iyer", "meera.iyer@trapwire.co.in", "+91 98450 67890", "XXXX-XXXX-1002"),
+    (3, "Rohan Patil", "rohan.patil@trapwire.co.in", "+91 97690 12345", "XXXX-XXXX-1003"),
+    (4, "Sanya Khan", "sanya.khan@trapwire.co.in", "+91 98190 23456", "XXXX-XXXX-1004"),
+    (5, "Kabir Rao", "kabir.rao@trapwire.co.in", "+91 98920 34567", "XXXX-XXXX-1005"),
+    (6, "Diya Nair", "diya.nair@trapwire.co.in", "+91 98330 45678", "XXXX-XXXX-1006"),
 ]
 
-DECOY_ENV = f"""# TRAPWIRE DECOY FILE - planted honeytokens, no real secrets
-APP_ENV=production-decoy
-DATABASE_URL=sqlite:///decoy_only.db
+DECOY_ENV = f"""# TRAPWIRE SECURE CREDENTIAL VAULT (HONEYTOKEN MONITOR)
+APP_ENV=production
+DATABASE_URL=sqlite:///enterprise_vault.db
 AWS_ACCESS_KEY_ID={DECOY_AWS_KEY}
-AWS_SECRET_ACCESS_KEY=DECOY-aws-secret-do-not-use-anywhere
+AWS_SECRET_ACCESS_KEY=DECOY-aws-secret-vault-token
 TRAPWIRE_API_KEY={DECOY_API_KEY}
-ADMIN_BACKUP_KEY=DE<redacted>
+ADMIN_BACKUP_KEY=DECOY-adm-master-sec
 """
 
-DECOY_PASSWD = """# TRAPWIRE DECOY passwd file - no real accounts
-root:x:0:0:decoy-root:/root:/bin/bash
-decoy_admin:x:1000:1000:Decoy Admin:/home/decoy:/bin/bash
-www-data:x:33:33:decoy-web:/var/www:/usr/sbin/nologin
+DECOY_PASSWD = """# TRAPWIRE Server Authentication Shadow Map
+root:x:0:0:System Administrator:/root:/bin/bash
+sys_admin:x:1000:1000:System Admin:/home/sysadmin:/bin/bash
+www-data:x:33:33:Web Service Worker:/var/www:/usr/sbin/nologin
 """
 
-DECOY_README = "Welcome to the TRAPWIRE decoy file area. Everything here is fake.\n"
+DECOY_README = (
+    "TRAPWIRE Secure Asset Repository v2.4 (Encrypted & Monitored Access)\n"
+    "Notice: All access attempts to this directory are audited under statutory compliance guidelines. "
+    "All assets in this zone operate as monitored decoy storage.\n"
+)
 
 
 def _lab_conn() -> sqlite3.Connection:
@@ -188,7 +191,7 @@ def init_lab_db():
             conn.executemany("INSERT INTO lab_customers VALUES (?,?,?,?,?)", DECOY_CUSTOMERS)
         if conn.execute("SELECT COUNT(*) AS c FROM lab_reviews").fetchone()["c"] == 0:
             conn.execute(
-                "INSERT INTO lab_reviews(product_id, author, comment, created_at) VALUES (1, 'Decoy Reviewer', 'Good decoy product, fast delivery.', ?)",
+                "INSERT INTO lab_reviews(product_id, author, comment, created_at) VALUES (1, 'Kavya Sharma', 'Great sound quality and prompt shipping. Very impressed with the build.', ?)",
                 (time.time(),),
             )
         conn.commit()

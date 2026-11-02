@@ -9,7 +9,7 @@ This guide details how to integrate **physical IoT and embedded hardware** with 
 ```
                       ┌────────────────────────────────────────┐
                       │      TRAPWIRE DEFENDER SERVER          │
-                      │       (FastAPI on Port 8000)           │
+                      │       (FastAPI on Port 8080)           │
                       │    MySQL Database + DPDP Engine        │
                       └───────▲──────────────────▲─────────────┘
                               │                  │
@@ -91,7 +91,7 @@ This guide details how to integrate **physical IoT and embedded hardware** with 
 
 ## 5. Starting the Hardware Bridge Daemon
 
-The hardware serial bridge links the TrapWire backend on Port 8000 with your USB-connected hardware:
+The hardware serial bridge links the TrapWire backend on Port 8080 with your USB-connected hardware:
 
 ```bash
 # 1. Install optional serial dependencies
@@ -114,7 +114,7 @@ On your Raspberry Pi located on the physical network:
 cd Trapwire
 
 # 2. Run the edge honeypot bait listener
-python hardware/raspberry_pi_node.py --server http://<YOUR_SERVER_IP>:8000 --node-id PI-HONEYPOT-01
+python hardware/raspberry_pi_node.py --server http://<YOUR_SERVER_IP>:8080 --node-id PI-HONEYPOT-01
 ```
 
 The Raspberry Pi will now:

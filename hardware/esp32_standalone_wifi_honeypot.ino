@@ -30,7 +30,7 @@
 // ------------------------------------------------------------- Configuration
 const char* WIFI_SSID     = "YOUR_WIFI_SSID";       // Enter your Wi-Fi Name
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";   // Enter your Wi-Fi Password
-const char* TRAPWIRE_HOST = "http://192.168.1.100:8000"; // Replace with your PC/Server IP
+const char* TRAPWIRE_HOST = "http://192.168.1.100:8080"; // Replace with your PC/Server IP
 
 const char* NODE_ID       = "ESP32-EDGE-SENSOR-01";
 const char* LOCATION      = "Physical Network Node (Office/Lab)";

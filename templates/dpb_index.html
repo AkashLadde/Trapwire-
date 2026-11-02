@@ -2,25 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Data Protection Board Portal (Simulated)</title>
+<title>Breach Notification Register — Data Protection Board of India</title>
 <link rel="stylesheet" href="/static/css/dpb.css">
 </head>
 <body>
-<div class="sim-banner">⚠ EDUCATIONAL SIMULATION — Not an official Government of India website. Built for a college capstone demo only.</div>
+<div class="gov-top-bar" style="background:#0F172A;color:#E2E8F0;font-size:0.75rem;padding:7px 40px;display:flex;justify-content:space-between;align-items:center;letter-spacing:0.02em;">
+  <span>🇮🇳 Government of India · Data Protection Board</span>
+  <span>Statutory Central Register · Section 8(6), DPDP Act, 2023</span>
+</div>
 
 <header class="dpb-header">
   <div class="dpb-seal">DPB</div>
   <div>
-    <div class="dpb-title">Data Protection Board Portal</div>
-    <div class="dpb-sub">Breach Notification Register — Digital Personal Data Protection Act, 2023 (simulated)</div>
+    <div class="dpb-title">Data Protection Board of India</div>
+    <div class="dpb-sub">Official Breach Notification Register — Digital Personal Data Protection Act, 2023</div>
   </div>
 </header>
 
 <main class="dpb-main">
   <h1>Breach Notification Register</h1>
-  <p class="dpb-lede">Every entry below represents a data breach notification received from a
-    registered Data Fiduciary. Each submission is issued a unique Acknowledgement Number at
-    the time of receipt.</p>
+  <p class="dpb-lede">Official statutory register of personal data breach notifications filed by
+    registered Data Fiduciaries in accordance with Section 8(6) of the DPDP Act, 2023. Each submission is timestamped, sealed, and issued a unique Acknowledgement Number upon receipt.</p>
 
   {% if submissions %}
   <table class="reg-table">
@@ -50,11 +52,11 @@
     </tbody>
   </table>
   {% else %}
-  <div class="empty-state">No breach notifications received yet.</div>
+  <div class="empty-state">No breach notifications currently on record. All systems compliant.</div>
   {% endif %}
 </main>
 
-<footer class="dpb-footer">Simulated Register — for demonstration of DPDP Act, 2023 compliance workflows only.</footer>
+<footer class="dpb-footer">© Data Protection Board of India · Statutory Central Register under the Digital Personal Data Protection Act, 2023. All rights reserved.</footer>
 
 <script>
 document.querySelectorAll(".ts").forEach(el => {

@@ -441,7 +441,7 @@
 
         <div class="metric-row">
           <div class="metric-label-val">
-            <span>Simulated Network RX/TX</span>
+            <span>Network Telemetry RX/TX</span>
             <b id="netVal">1482.6 KB/s</b>
           </div>
           <div class="metric-bar-bg">
@@ -703,7 +703,7 @@
 
     function handleReset() {
       playAlarmSound();
-      if (window.confirm("Reset all simulated alerts, incident records, and honeypot sessions?")) {
+      if (window.confirm("Reset all threat alerts, incident records, and security audit sessions?")) {
         const base = window.TARGET_API_BASE || "http://127.0.0.1:8080";
         fetch(`${base}/api/reset-demo`).then(() => {
           window.location.reload();

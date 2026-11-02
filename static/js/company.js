@@ -623,7 +623,7 @@ function renderSubmittedReports() {
     .catch(() => {});
 }
 
-// 6. Interactive Offensive Simulation Lab Triggers
+// 6. Interactive Threat Vector Triggers
 window.toggleSimDropdown = function(e) {
   if (e) e.stopPropagation();
   const menu = document.getElementById("socSimMenu");
@@ -655,7 +655,7 @@ window.triggerSimEvent = async function(type) {
     target = "/canary/token-canary-demo-90412";
   }
 
-  showToast(`⚡ Simulation Fired: ${type.toUpperCase()}`);
+  showToast(`⚡ Threat Vector Executed: ${type.toUpperCase()}`);
 
   try {
     const res = await fetch("/api/attacker-session-event", {
@@ -665,7 +665,7 @@ window.triggerSimEvent = async function(type) {
         event: type,
         user: "adversary_operator",
         ip: "185.220.101.45 (Tor Relay Amsterdam)",
-        tool: "TrapWire SOC Simulator",
+        tool: "TrapWire Threat Engine",
         payload: payload,
         target: target
       })
@@ -675,12 +675,12 @@ window.triggerSimEvent = async function(type) {
       showToast(`📄 DPB Statutory Ack Received: ${data.dpb_ack}`);
     }
   } catch (err) {
-    showToast("Simulation error: " + err.message);
+    showToast("Attack execution error: " + err.message);
   }
 };
 
 window.resetSocDemo = async function() {
-  if (!confirm("Reset all SOC incident records, threat timeline points, and simulation state?")) return;
+  if (!confirm("Reset all SOC incident records, threat timeline points, and alert telemetry?")) return;
   try {
     await fetch("/api/reset-demo");
     window.ALL_ALERTS = [];

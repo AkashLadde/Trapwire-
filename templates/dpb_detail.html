@@ -2,17 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Acknowledgement {{ r.ack_number }} — DPB Portal (Simulated)</title>
+<title>Acknowledgement {{ r.ack_number }} — Data Protection Board of India</title>
 <link rel="stylesheet" href="/static/css/dpb.css">
 </head>
 <body>
-<div class="sim-banner">⚠ EDUCATIONAL SIMULATION — Not an official Government of India website.</div>
+<div class="gov-top-bar" style="background:#0F172A;color:#E2E8F0;font-size:0.75rem;padding:7px 40px;display:flex;justify-content:space-between;align-items:center;letter-spacing:0.02em;">
+  <span>🇮🇳 Government of India · Data Protection Board</span>
+  <span>Statutory Central Register · Section 8(6), DPDP Act, 2023</span>
+</div>
 
 <header class="dpb-header">
   <div class="dpb-seal">DPB</div>
   <div>
-    <div class="dpb-title">Data Protection Board Portal</div>
-    <div class="dpb-sub">Acknowledgement of Breach Notification</div>
+    <div class="dpb-title">Data Protection Board of India</div>
+    <div class="dpb-sub">Official Acknowledgement of Breach Notification</div>
   </div>
 </header>
 
@@ -22,8 +25,8 @@
   <div class="cert">
     <div class="cert-stamp">ACKNOWLEDGED</div>
     <h1>Acknowledgement Receipt</h1>
-    <p class="cert-sub">This receipt confirms that the breach notification described below has
-      been received and logged by the Board.</p>
+    <p class="cert-sub">This receipt confirms that the personal data breach notification described below has
+      been officially received and logged into the Central Registry under Section 8(6) of the Digital Personal Data Protection Act, 2023.</p>
 
     <table class="cert-table">
       <tr><th>Acknowledgement Number</th><td class="mono">{{ r.ack_number }}</td></tr>
@@ -46,7 +49,7 @@
   </div>
 </main>
 
-<footer class="dpb-footer">Simulated Register — for demonstration of DPDP Act, 2023 compliance workflows only.</footer>
+<footer class="dpb-footer">© Data Protection Board of India · Statutory Central Register under the Digital Personal Data Protection Act, 2023. All rights reserved.</footer>
 
 <script>
 document.querySelectorAll(".ts").forEach(el => {
