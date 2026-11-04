@@ -48,34 +48,59 @@ This guide details how to integrate **physical IoT and embedded hardware** with 
 
 ### A. ESP32 DevKit V1 (Wi-Fi + Bluetooth) with Dual LEDs (White & Red), OLED & Buzzer
 
-If you have an **ESP32 Development Board (ESP32 DevKit V1 with Wi-Fi and Bluetooth)**, use this exact pinout table and the firmware at [`hardware/esp32_devkit_threat_siren.ino`](./esp32_devkit_threat_siren.ino):
+If you have an **ESP32 Development Board (ESP32 DevKit V1 with Wi-Fi and Bluetooth)**, use this exact pinout table and the firmware at [`hardware/esp32_devkit_threat_siren/esp32_devkit_threat_siren.ino`](./esp32_devkit_threat_siren/esp32_devkit_threat_siren.ino):
 
 | ESP32 DevKit V1 Pin | GPIO | Target Component | Component Pin | Notes & Resistor |
 | :--- | :--- | :--- | :--- | :--- |
-| **3V3** | 3.3V Power | OLED SSD1306 | **VCC** | 3.3V logic & power |
+| **3V3** (or **VIN / 5V**) | Power | 0.96" I2C OLED (128x64) | **VCC** | Connect to 3V3. **Note:** If screen stays dark, move to **VIN/5V** (many OLED breakout modules have an onboard 3.3V LDO regulator that needs 5V to drive the internal charge pump). |
 | **GND** | Ground | OLED + LEDs + Buzzer | **GND / (-)** | Connect to breadboard common ground rail |
-| **D21** | GPIO 21 | OLED SSD1306 | **SDA** | Default ESP32 I2C Data line |
-| **D22** | GPIO 22 | OLED SSD1306 | **SCL** | Default ESP32 I2C Clock line |
+| **D21** | GPIO 21 | 0.96" I2C OLED | **SDA** | ESP32 hardware I2C Data line (Internal pull-up enabled in sketch) |
+| **D22** | GPIO 22 | 0.96" I2C OLED | **SCL** | ESP32 hardware I2C Clock line (Internal pull-up enabled in sketch) |
 | **D18** | GPIO 18 | **White LED** | **Anode (+ / Long leg)** | In series with **220Ω - 330Ω** resistor. Indicates **System Armed / Normal Guard** |
 | **D19** | GPIO 19 | **Red LED** | **Anode (+ / Long leg)** | In series with **220Ω - 330Ω** resistor. Strobes rapidly on **Threat / Attack** |
-| **D23** | GPIO 23 | **Active Buzzer** | **(+) or Signal** | Emits tactical audio warning sirens on attack |
+| **D23** | GPIO 23 | **Piezo Buzzer** | **(+) or Signal** | Emits tactical audio warning sirens on attack (supports Active & Passive) |
 
 #### Breadboard Wiring Summary for ESP32 DevKit V1:
 1. **Common Ground**: Connect the ESP32 `GND` pin to the blue (-) ground rail on your breadboard.
-2. **0.96" I2C OLED (SSD1306 128x64)**:
-   - `VCC` $\rightarrow$ ESP32 `3V3`
+2. **0.96" I2C OLED Module (128x64 pixels)**:
+   - `VCC` $\rightarrow$ ESP32 `3V3` (if display does not light up, connect to `VIN / 5V`)
    - `GND` $\rightarrow$ Breadboard Ground rail
    - `SDA` $\rightarrow$ ESP32 `D21` (GPIO 21)
    - `SCL` $\rightarrow$ ESP32 `D22` (GPIO 22)
+   - **Crucial Physical Check:** Read the silkscreen printed on your OLED module. Some modules are ordered `GND - VCC - SCL - SDA`, while others are `VCC - GND - SCL - SDA`. Ensure VCC and GND are not reversed!
 3. **White LED (Normal Standby Guard)**:
    - Long leg (+) $\rightarrow$ 220Ω or 330Ω resistor $\rightarrow$ ESP32 `D18` (GPIO 18)
    - Short leg (-) $\rightarrow$ Breadboard Ground rail
 4. **Red LED (Breach Alarm Strobe)**:
    - Long leg (+) $\rightarrow$ 220Ω or 330Ω resistor $\rightarrow$ ESP32 `D19` (GPIO 19)
    - Short leg (-) $\rightarrow$ Breadboard Ground rail
-5. **Active Buzzer (Audio Alert Siren)**:
+5. **Active or Passive Buzzer (Audio Alert Siren)**:
    - Positive pin (+) $\rightarrow$ ESP32 `D23` (GPIO 23)
    - Negative pin (-) $\rightarrow$ Breadboard Ground rail
+
+---
+
+### 0.96" I2C OLED Display Troubleshooting Checklist
+If your 0.96" OLED screen is completely dark, blank, or not working:
+1. **Built-in I2C Scanner Diagnosis**:
+   - Open Arduino IDE, open Tools > Serial Monitor, and set baud rate to **115200**.
+   - Press the **EN / RST** button on your ESP32.
+   - The sketch will automatically scan all I2C addresses and print:
+     ```
+     [I2C SCANNER] Found I2C device at address 0x3C! (or 0x3D)
+     [+] OLED initialized successfully!
+     ```
+   - If it prints `[I2C WARNING] NO I2C DEVICES FOUND ON BUS!`, your DuPont jumper wires are loose, or SDA/SCL are swapped, or VCC is not receiving power.
+2. **Power Rail Dropout (3.3V vs 5V / VIN)**:
+   - Almost all 0.96" I2C OLED breakouts contain a tiny voltage regulator on the back (labeled `662K`).
+   - When fed with 3.3V from ESP32's 3V3 pin, the voltage drops to ~2.8V, which is too low for the internal charge pump to generate the ~7.5V required to illuminate the OLED pixels.
+   - **Fix:** Move the OLED's `VCC` jumper wire to the ESP32's `VIN` or `5V` pin (power from USB).
+3. **SDA & SCL Pin Swapping**:
+   - Ensure the OLED's `SDA` is plugged into ESP32 `D21` (GPIO 21).
+   - Ensure the OLED's `SCL` is plugged into ESP32 `D22` (GPIO 22).
+4. **Driver IC Compatibility**:
+   - Some 0.96" modules use the **SH1106** or **SSD1315** controller instead of **SSD1306**.
+   - Our updated firmware automatically sends charge-pump activation commands for both SSD1306 (`0x8D, 0x14`) and SH1106 (`0xAD, 0x8B`) at maximum contrast (`0xFF`), ensuring both display types illuminate.
 
 ---
 

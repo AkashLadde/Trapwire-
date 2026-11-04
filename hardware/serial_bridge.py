@@ -31,6 +31,10 @@ try:
         sys.stdout.reconfigure(encoding='utf-8')
 except Exception:
     pass
+
+try:
+    import serial
+    import serial.tools.list_ports
     HAS_SERIAL = True
 except ImportError:
     HAS_SERIAL = False
