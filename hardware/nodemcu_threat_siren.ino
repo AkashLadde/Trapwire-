@@ -47,6 +47,12 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define PIN_RED_LED    12  // NodeMCU Pin D6 (GPIO 12) - Threat Strobe
 #define PIN_BUZZER     13  // NodeMCU Pin D7 (GPIO 13) - Audio Alarm
 
+// Buzzer Polarity Configuration:
+// Set to false for standard buzzers and active-HIGH modules; set to true if buzzer sounds on LOW.
+#define BUZZER_ACTIVE_LOW  false
+#define BUZZER_ON_LEVEL    (BUZZER_ACTIVE_LOW ? LOW : HIGH)
+#define BUZZER_OFF_LEVEL   (BUZZER_ACTIVE_LOW ? HIGH : LOW)
+
 // Operational States
 enum DefenseState {
   STATE_STANDBY,
@@ -62,9 +68,33 @@ String currentAttackerIp = "0.0.0.0";
 String currentAttackType = "STANDBY";
 String currentDpbAck = "NONE";
 
-// Strobe Timing Variables
-unsigned long lastStrobeToggle = 0;
-bool strobeState = false;
+// Non-Blocking Timing Variables
+unsigned long lastWhiteBlinkToggle = 0;
+bool whiteLedState = false;
+
+unsigned long lastRedBlinkToggle = 0;
+bool redLedState = false;
+
+unsigned long lastSirenToggle = 0;
+bool sirenToneHigh = false;
+
+void silenceBuzzer() {
+  noTone(PIN_BUZZER);
+  digitalWrite(PIN_BUZZER, BUZZER_OFF_LEVEL);
+}
+
+void playPoliceSiren(unsigned long now) {
+  if (now - lastSirenToggle >= 250) {
+    lastSirenToggle = now;
+    sirenToneHigh = !sirenToneHigh;
+    if (sirenToneHigh) {
+      tone(PIN_BUZZER, 960);
+    } else {
+      tone(PIN_BUZZER, 650);
+    }
+    digitalWrite(PIN_BUZZER, BUZZER_ON_LEVEL);
+  }
+}
 
 void drawStandbyScreen() {
   display.clearDisplay();
@@ -139,10 +169,10 @@ void setup() {
   pinMode(PIN_RED_LED, OUTPUT);
   pinMode(PIN_BUZZER, OUTPUT);
 
-  // Default Pin States: White LED ON, Red LED OFF, Buzzer OFF
-  digitalWrite(PIN_WHITE_LED, HIGH);
+  // Initial Pin States: Everything strictly OFF initially
+  digitalWrite(PIN_WHITE_LED, LOW);
   digitalWrite(PIN_RED_LED, LOW);
-  digitalWrite(PIN_BUZZER, LOW);
+  silenceBuzzer();
 
   // Initialize I2C for NodeMCU (SDA=D2/GPIO4, SCL=D1/GPIO5)
   Wire.begin(4, 5);
@@ -159,7 +189,7 @@ void setup() {
     display.setCursor(10, 30);
     display.println("INITIALIZING NODE...");
     display.display();
-    delay(1000);
+    delay(500);
   }
 
   drawStandbyScreen();
@@ -196,64 +226,65 @@ void processIncomingThreatJson(const String& jsonStr) {
 }
 
 void loop() {
-  // 1. Read JSON Commands from USB Serial
+  unsigned long now = millis();
+
+  // 1. Read JSON Commands / Manual Test Commands from USB Serial
   if (Serial.available()) {
     String line = Serial.readStringUntil('\n');
     line.trim();
     if (line.length() > 0) {
-      processIncomingThreatJson(line);
+      if (line.equalsIgnoreCase("attack") || line.equalsIgnoreCase("test") || line.equalsIgnoreCase("siren")) {
+        currentState = STATE_CRITICAL;
+        lastThreatTime = now;
+        currentAttackerIp = "192.168.1.105";
+        currentAttackType = "TEST POLICE SIREN";
+        drawThreatScreen("critical", currentAttackerIp, currentAttackType);
+      } else if (line.equalsIgnoreCase("reset") || line.equalsIgnoreCase("standby") || line.equalsIgnoreCase("stop")) {
+        currentState = STATE_STANDBY;
+        digitalWrite(PIN_RED_LED, LOW);
+        silenceBuzzer();
+        drawStandbyScreen();
+      } else {
+        processIncomingThreatJson(line);
+      }
     }
   }
 
   // 2. Hardware Alarm State Machine
-  unsigned long now = millis();
-
-  if (currentState == STATE_CRITICAL) {
-    // Normal White LED OFF during attack
+  if (currentState == STATE_CRITICAL || currentState == STATE_WARNING) {
+    // Attack Mode: White LED strictly OFF
     digitalWrite(PIN_WHITE_LED, LOW);
 
-    // High-tempo Red Strobe & Pulsed Siren
-    if (now - lastStrobeToggle > 120) {
-      lastStrobeToggle = now;
-      strobeState = !strobeState;
-      digitalWrite(PIN_RED_LED, strobeState ? HIGH : LOW);
-      digitalWrite(PIN_BUZZER, strobeState ? HIGH : LOW);
+    // Red LED fast emergency strobe (120ms)
+    if (now - lastRedBlinkToggle >= 120) {
+      lastRedBlinkToggle = now;
+      redLedState = !redLedState;
+      digitalWrite(PIN_RED_LED, redLedState ? HIGH : LOW);
     }
+
+    // Play Police Siren
+    playPoliceSiren(now);
 
     // Auto-Reset back to Standby after alarm duration expires
     if (now - lastThreatTime > ALARM_DURATION_MS) {
       currentState = STATE_STANDBY;
       digitalWrite(PIN_RED_LED, LOW);
-      digitalWrite(PIN_BUZZER, LOW);
-      digitalWrite(PIN_WHITE_LED, HIGH); // Restore White Guard LED
+      silenceBuzzer();
       drawStandbyScreen();
       Serial.println(F("{\"event\":\"AUTO_RESET\",\"status\":\"STANDBY\"}"));
     }
   } 
-  else if (currentState == STATE_WARNING) {
-    // Warning: Slower Red Flash, Short chirps
-    digitalWrite(PIN_WHITE_LED, LOW);
-
-    if (now - lastStrobeToggle > 300) {
-      lastStrobeToggle = now;
-      strobeState = !strobeState;
-      digitalWrite(PIN_RED_LED, strobeState ? HIGH : LOW);
-      digitalWrite(PIN_BUZZER, strobeState ? HIGH : LOW);
-    }
-
-    if (now - lastThreatTime > (ALARM_DURATION_MS / 2)) {
-      currentState = STATE_STANDBY;
-      digitalWrite(PIN_RED_LED, LOW);
-      digitalWrite(PIN_BUZZER, LOW);
-      digitalWrite(PIN_WHITE_LED, HIGH);
-      drawStandbyScreen();
-    }
-  } 
   else {
-    // Standby Mode: White LED solid ON, Red LED OFF, Buzzer OFF
-    digitalWrite(PIN_WHITE_LED, HIGH);
+    // Normal Standby Mode: Red LED strictly OFF, Buzzer strictly silent
     digitalWrite(PIN_RED_LED, LOW);
-    digitalWrite(PIN_BUZZER, LOW);
+    silenceBuzzer();
+
+    // White LED rhythmic blink (500ms ON / 500ms OFF)
+    if (now - lastWhiteBlinkToggle >= 500) {
+      lastWhiteBlinkToggle = now;
+      whiteLedState = !whiteLedState;
+      digitalWrite(PIN_WHITE_LED, whiteLedState ? HIGH : LOW);
+    }
   }
 }
 

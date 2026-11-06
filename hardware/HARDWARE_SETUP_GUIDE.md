@@ -56,9 +56,9 @@ If you have an **ESP32 Development Board (ESP32 DevKit V1 with Wi-Fi and Bluetoo
 | **GND** | Ground | OLED + LEDs + Buzzer | **GND / (-)** | Connect to breadboard common ground rail |
 | **D21** | GPIO 21 | 0.96" I2C OLED | **SDA** | ESP32 hardware I2C Data line (Internal pull-up enabled in sketch) |
 | **D22** | GPIO 22 | 0.96" I2C OLED | **SCL** | ESP32 hardware I2C Clock line (Internal pull-up enabled in sketch) |
-| **D18** | GPIO 18 | **White LED** | **Anode (+ / Long leg)** | In series with **220Ω - 330Ω** resistor. Indicates **System Armed / Normal Guard** |
-| **D19** | GPIO 19 | **Red LED** | **Anode (+ / Long leg)** | In series with **220Ω - 330Ω** resistor. Strobes rapidly on **Threat / Attack** |
-| **D23** | GPIO 23 | **Piezo Buzzer** | **(+) or Signal** | Emits tactical audio warning sirens on attack (supports Active & Passive) |
+| **D18** | GPIO 18 | **White LED** | **Anode (+ / Long leg)** | In series with **220Ω - 330Ω** resistor. **Blinks rhythmically (500ms ON / 500ms OFF)** during **Normal Standby** |
+| **D19** | GPIO 19 | **Red LED** | **Anode (+ / Long leg)** | In series with **220Ω - 330Ω** resistor. **Strobes rapidly (120ms)** during **Active Attack** |
+| **D23** | GPIO 23 | **Piezo Buzzer** | **(+) or Signal** | **Completely silent in Standby**. Produces **Police Siren (960Hz / 650Hz wail)** during Attack |
 
 #### Breadboard Wiring Summary for ESP32 DevKit V1:
 1. **Common Ground**: Connect the ESP32 `GND` pin to the blue (-) ground rail on your breadboard.
@@ -68,15 +68,43 @@ If you have an **ESP32 Development Board (ESP32 DevKit V1 with Wi-Fi and Bluetoo
    - `SDA` $\rightarrow$ ESP32 `D21` (GPIO 21)
    - `SCL` $\rightarrow$ ESP32 `D22` (GPIO 22)
    - **Crucial Physical Check:** Read the silkscreen printed on your OLED module. Some modules are ordered `GND - VCC - SCL - SDA`, while others are `VCC - GND - SCL - SDA`. Ensure VCC and GND are not reversed!
-3. **White LED (Normal Standby Guard)**:
+3. **White LED (Normal Standby Armed Indicator)**:
    - Long leg (+) $\rightarrow$ 220Ω or 330Ω resistor $\rightarrow$ ESP32 `D18` (GPIO 18)
    - Short leg (-) $\rightarrow$ Breadboard Ground rail
+   - *Behavior*: Blinks once per second (500ms ON, 500ms OFF) to indicate the system is actively guarding the perimeter.
 4. **Red LED (Breach Alarm Strobe)**:
    - Long leg (+) $\rightarrow$ 220Ω or 330Ω resistor $\rightarrow$ ESP32 `D19` (GPIO 19)
    - Short leg (-) $\rightarrow$ Breadboard Ground rail
+   - *Behavior*: Strictly OFF in standby. Blinks in a rapid tactical emergency strobe (120ms ON / 120ms OFF) during an attack.
 5. **Active or Passive Buzzer (Audio Alert Siren)**:
    - Positive pin (+) $\rightarrow$ ESP32 `D23` (GPIO 23)
    - Negative pin (-) $\rightarrow$ Breadboard Ground rail
+   - *Behavior*: Strictly SILENT in standby. Emits an alternating Police Siren sound (960 Hz / 650 Hz dual-tone wail) during an attack.
+
+---
+
+### Buzzer Troubleshooting: Fixing Continuous Sound Screaming
+If your buzzer produces a continuous sound immediately upon powering on:
+1. **Active-LOW Buzzer Inversion**:
+   - Many buzzer breakout boards (such as the 3-pin KY-012 module with a PNP transistor) are **Active-LOW**, meaning they turn ON when driven `LOW` and turn OFF when driven `HIGH`.
+   - In [`hardware/esp32_devkit_threat_siren/esp32_devkit_threat_siren.ino`](./esp32_devkit_threat_siren/esp32_devkit_threat_siren.ino), locate line 76:
+     ```cpp
+     #define BUZZER_ACTIVE_LOW  false
+     ```
+   - If your buzzer sounds continuously when idle, change this setting to:
+     ```cpp
+     #define BUZZER_ACTIVE_LOW  true
+     ```
+   - Re-upload the sketch to your ESP32.
+2. **Active vs. Passive Buzzer**:
+   - **Active Buzzer** (has a sticker on top and sealed epoxy bottom): Generates its own tone when DC voltage is applied. Driven by `digitalWrite()`.
+   - **Passive Buzzer** (exposed green PCB backing): Requires an AC frequency signal to generate tone. Driven by `tone(PIN_BUZZER, freq)`.
+   - The updated firmware automatically handles **both** passive and active buzzers by simultaneously pulsing `tone()` frequency and driving the digital GPIO level!
+3. **3-Pin Buzzer Modules**:
+   - If using a 3-pin module labeled `S`, `+`, `-`:
+     - `S` (Signal) $\rightarrow$ ESP32 `D23`
+     - `+` (VCC) $\rightarrow$ ESP32 `3V3` (or `VIN`)
+     - `-` (GND) $\rightarrow$ ESP32 `GND`
 
 ---
 
@@ -171,9 +199,25 @@ If you have a **NodeMCU ESP8266** with discrete **White LED**, **Red LED**, **0.
 6. Click **Upload** (➡️ arrow icon).
    - *Pro Tip*: If Arduino IDE shows `Connecting........_____.....`, press and hold the **BOOT** button on the ESP32 for 1-2 seconds until the percentage counter appears, then release it.
 7. Once uploaded:
-   - The **White LED** will illuminate steady ON (System Armed).
-   - The **OLED** will display `TRAPWIRE DEFENDER - STATUS: ARMED & READY`.
-   - The **Red LED** and **Buzzer** remain silent until an attack arrives.
+   - **Self-Test Routine**: White LED blinks twice, Red LED blinks twice, and buzzer gives a brief 300ms chirp.
+   - **Standby Mode**:
+     - The **White LED** will **blink rhythmically** (500ms ON / 500ms OFF) to indicate the system is armed.
+     - The **Red LED** is **strictly OFF**.
+     - The **Buzzer** is **strictly SILENT**.
+     - The **OLED** displays `TRAPWIRE DEFENDER - STATUS: ARMED & READY`.
+   - **Attack Mode** (when an attack hits or when testing):
+     - The **White LED** turns OFF.
+     - The **Red LED** blinks in an **emergency strobe** (120ms ON / 120ms OFF).
+     - The **Buzzer** sounds an authentic **Police Siren** (alternating 960Hz / 650Hz dual-tone wail).
+     - The **OLED** displays `! CRITICAL BREACH !` with attacker IP and exploit vector.
+     - Automatically resets back to Standby after 9 seconds.
+
+### Quick Testing in Arduino IDE (Serial Monitor)
+You can test the siren, OLED, and LEDs directly inside the Arduino IDE without even running the server:
+1. In Arduino IDE, click *Tools > Serial Monitor* and set the baud rate to **115200** (with *Newline* or *Both NL & CR*).
+2. Type `attack` or `test` or `siren` and press **Enter**:
+   - The ESP32 immediately turns OFF the white LED, begins strobing the red LED, sounds the police siren, and renders the incident screen on the OLED for 9 seconds!
+3. Type `reset` or `standby` to return immediately to Standby mode (white LED blinking, buzzer silent).
 
 ### Option 2: Uploading to NodeMCU (ESP8266)
 1. Open the [Arduino IDE](https://www.arduino.cc/en/software).

@@ -5,13 +5,21 @@
  * Target Board:
  *   ESP32 Development Board (ESP32 DevKit V1 with Wi-Fi & Bluetooth, 30-pin or 36-pin)
  *
- * Connected Components:
- *   1. 0.96" 128x64 I2C OLED Display Module (SSD1306 / SH1106 / SSD1315)
- *   2. White LED (Normal Guard Status / Standby Armed)
- *   3. Red LED (Threat Intrusion Strobe / Active Attack In Progress)
- *   4. Piezo Buzzer (Active or Passive Audio Warning Siren)
+ * Operational Behavior:
+ *   1. NORMAL STANDBY:
+ *      - White LED: BLINKS rhythmically (500ms ON / 500ms OFF) to indicate system armed
+ *      - Red LED:   OFF
+ *      - Buzzer:    SILENT (completely OFF)
+ *      - OLED:      Displays "TRAPWIRE DEFENDER - STATUS: ARMED & READY"
  *
- * Exact Pin Connections on ESP32 DevKit V1:
+ *   2. ATTACK TIME (Threat Intrusion Detected):
+ *      - White LED: OFF
+ *      - Red LED:   BLINKS rapidly (120ms emergency strobe)
+ *      - Buzzer:    Produces authentic POLICE SIREN sound (960Hz / 650Hz dual-tone wail)
+ *      - OLED:      Displays "! CRITICAL BREACH !" with Attacker IP, Attack Vector & DPB status
+ *      - Auto-resets back to Standby after 9 seconds of inactivity
+ *
+ * Pin Connections on ESP32 DevKit V1:
  *   - OLED VCC         -> 3V3 (or VIN/5V if display stays dark due to onboard LDO dropout)
  *   - OLED GND         -> GND pin on ESP32
  *   - OLED SDA         -> GPIO 21 (Pin labeled D21)
@@ -23,13 +31,14 @@
  *   - Buzzer (+)       -> GPIO 23 (Pin labeled D23)
  *   - Buzzer (-)       -> GND pin on ESP32
  *
- * Required Arduino Libraries:
+ * Required Arduino Libraries (Install via Arduino IDE Library Manager):
  *   1. "Adafruit SSD1306" by Adafruit
  *   2. "Adafruit GFX Library" by Adafruit
  *   3. "ArduinoJson" (v6 or v7) by Benoit Blanchon
  *
- * Serial Communication:
- *   Baud rate: 115200 baud over USB Serial (connected to serial_bridge.py)
+ * Communication:
+ *   115200 baud USB Serial connected to hardware/serial_bridge.py
+ *   Manual serial commands supported: type "attack" or "test" to test; "reset" to standby.
  * =====================================================================================
  */
 
@@ -43,10 +52,10 @@
 // -------------------------------------------------------------------------------------
 #define SCREEN_WIDTH  128
 #define SCREEN_HEIGHT 64
-#define OLED_RESET     -1  // Reset pin # (or -1 if sharing Arduino reset pin)
+#define OLED_RESET     -1  // No dedicated reset pin on 4-pin I2C modules
 
-#define I2C_SDA_PIN    21  // ESP32 default hardware I2C SDA (D21)
-#define I2C_SCL_PIN    22  // ESP32 default hardware I2C SCL (D22)
+#define I2C_SDA_PIN    21  // ESP32 hardware I2C SDA (D21)
+#define I2C_SCL_PIN    22  // ESP32 hardware I2C SCL (D22)
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 bool oledReady = false;
@@ -55,9 +64,19 @@ uint8_t detectedOledAddress = 0x3C;
 // -------------------------------------------------------------------------------------
 // GPIO Pin Assignments
 // -------------------------------------------------------------------------------------
-#define PIN_WHITE_LED  18  // GPIO 18 (D18) - Normal Guard / Standby Status
-#define PIN_RED_LED    19  // GPIO 19 (D19) - Threat Alarm Strobe
-#define PIN_BUZZER     23  // GPIO 23 (D23) - Warning Audio Siren
+#define PIN_WHITE_LED  18  // GPIO 18 (D18) - Normal Guard Status (Blinks in Standby)
+#define PIN_RED_LED    19  // GPIO 19 (D19) - Threat Alarm Strobe (Blinks during Attack)
+#define PIN_BUZZER     23  // GPIO 23 (D23) - Warning Audio Siren (Police Siren on Attack)
+
+// -------------------------------------------------------------------------------------
+// Buzzer Polarity Configuration:
+// - Standard raw buzzers and Active-HIGH modules: BUZZER_ACTIVE_LOW = false
+// - If your buzzer module is inverted (sounds on LOW), change this to true!
+// -------------------------------------------------------------------------------------
+#define BUZZER_ACTIVE_LOW  false
+
+#define BUZZER_ON_LEVEL    (BUZZER_ACTIVE_LOW ? LOW : HIGH)
+#define BUZZER_OFF_LEVEL   (BUZZER_ACTIVE_LOW ? HIGH : LOW)
 
 // -------------------------------------------------------------------------------------
 // Operational States
@@ -75,22 +94,47 @@ const unsigned long ALARM_DURATION_MS = 9000; // Alarm active for 9s before auto
 String currentAttackerIp = "0.0.0.0";
 String currentAttackType = "STANDBY";
 
-// Strobe Timing Variables
-unsigned long lastStrobeToggle = 0;
-bool strobeState = false;
+// -------------------------------------------------------------------------------------
+// Non-Blocking Timing Variables
+// -------------------------------------------------------------------------------------
+// 1. Normal Standby White LED Blink (500ms ON / 500ms OFF = 1Hz)
+unsigned long lastWhiteBlinkToggle = 0;
+bool whiteLedState = false;
 
-// Universal Buzzer Driver (supports both Active and Passive Piezo Buzzers)
-void soundBuzzer(bool on) {
-  if (on) {
-    digitalWrite(PIN_BUZZER, HIGH);
+// 2. Attack Time Red LED Fast Strobe (120ms ON / 120ms OFF)
+unsigned long lastRedBlinkToggle = 0;
+bool redLedState = false;
+
+// 3. Attack Time Police Siren (Alternates 960Hz / 650Hz every 250ms)
+unsigned long lastSirenToggle = 0;
+bool sirenToneHigh = false;
+
+// -------------------------------------------------------------------------------------
+// Buzzer Functions: Police Siren & Silence
+// -------------------------------------------------------------------------------------
+void silenceBuzzer() {
+  #if defined(ESP32)
+  noTone(PIN_BUZZER);
+  #endif
+  digitalWrite(PIN_BUZZER, BUZZER_OFF_LEVEL);
+}
+
+void playPoliceSiren(unsigned long now) {
+  // Police Siren: Alternates between High Tone (960 Hz) and Low Tone (650 Hz) every 250ms
+  if (now - lastSirenToggle >= 250) {
+    lastSirenToggle = now;
+    sirenToneHigh = !sirenToneHigh;
+
     #if defined(ESP32)
-    tone(PIN_BUZZER, 2400); // 2.4kHz tone for passive buzzers
+    if (sirenToneHigh) {
+      tone(PIN_BUZZER, 960);  // High pitch "WEE"
+    } else {
+      tone(PIN_BUZZER, 650);  // Low pitch "WOO"
+    }
     #endif
-  } else {
-    digitalWrite(PIN_BUZZER, LOW);
-    #if defined(ESP32)
-    noTone(PIN_BUZZER);
-    #endif
+
+    // For active buzzers: ensure pin is driven to active level
+    digitalWrite(PIN_BUZZER, BUZZER_ON_LEVEL);
   }
 }
 
@@ -136,7 +180,7 @@ uint8_t scanI2CAddress() {
     Serial.println(F("  2. Check GND wire: Must be connected to ESP32 GND."));
     Serial.println(F("  3. Check SDA wire: Must be connected to GPIO 21 (D21)."));
     Serial.println(F("  4. Check SCL wire: Must be connected to GPIO 22 (D22)."));
-    Serial.println(F("  5. Check OLED pinout order: Some boards are GND-VCC-SCL-SDA, others are VCC-GND-SCL-SDA."));
+    Serial.println(F("  5. Check OLED pinout: Some modules are GND-VCC-SCL-SDA, others are VCC-GND-SCL-SDA."));
     Serial.println(F("========================================================\n"));
   } else {
     Serial.println(F("========================================================\n"));
@@ -149,7 +193,6 @@ uint8_t scanI2CAddress() {
 // Initialize OLED with charge pump overrides for maximum compatibility
 // -------------------------------------------------------------------------------------
 bool initOledDisplay(uint8_t addr) {
-  // Try Adafruit begin
   if (!display.begin(SSD1306_SWITCHCAPVCC, addr, false, false)) {
     return false;
   }
@@ -191,7 +234,7 @@ void drawStandbyScreen() {
   display.println(F("STATUS: ARMED & READY"));
 
   display.setCursor(4, 29);
-  display.println(F("NODE: ESP32 DevKit V1"));
+  display.println(F("WHITE LED: BLINKING"));
 
   display.setCursor(4, 41);
   display.println(F("HONEYPOT: ACTIVE GUARD"));
@@ -232,7 +275,7 @@ void drawThreatScreen(const String& level, const String& ip, const String& msg) 
   display.println(shortMsg.length() > 0 ? shortMsg : F("EXPLOIT PROBE"));
 
   display.setCursor(2, 42);
-  display.print(F("DECOY: QUARANTINED"));
+  display.print(F("RED STROBE + SIREN"));
 
   display.drawLine(0, 52, 127, 52, SSD1306_WHITE);
   display.setCursor(4, 55);
@@ -253,10 +296,10 @@ void setup() {
   pinMode(PIN_RED_LED, OUTPUT);
   pinMode(PIN_BUZZER, OUTPUT);
 
-  // Initial state: LEDs OFF, Buzzer OFF
+  // Initial state: Everything strictly OFF
   digitalWrite(PIN_WHITE_LED, LOW);
   digitalWrite(PIN_RED_LED, LOW);
-  soundBuzzer(false);
+  silenceBuzzer();
 
   // Configure ESP32 I2C pins with internal pull-ups enabled
   pinMode(I2C_SDA_PIN, INPUT_PULLUP);
@@ -290,8 +333,10 @@ void setup() {
   }
 
   // =========================================================================
-  // HARDWARE POWER-ON SELF-TEST DIAGNOSTIC (Verifies OLED, LEDs & Buzzer)
+  // HARDWARE POWER-ON SELF-TEST (Verifies OLED, White LED, Red LED & Siren)
   // =========================================================================
+  Serial.println(F("[SELF-TEST] Testing Hardware: White LED, Red LED & Police Siren..."));
+
   if (oledReady) {
     display.clearDisplay();
     display.drawRect(0, 0, 128, 64, SSD1306_WHITE); // Outer test border
@@ -309,24 +354,50 @@ void setup() {
     display.display();
   }
 
-  // Step 1: Light White LED
+  // Step 1: Blink White LED twice to confirm wiring & operation
   digitalWrite(PIN_WHITE_LED, HIGH);
-  delay(350);
+  delay(180);
+  digitalWrite(PIN_WHITE_LED, LOW);
+  delay(120);
+  digitalWrite(PIN_WHITE_LED, HIGH);
+  delay(180);
+  digitalWrite(PIN_WHITE_LED, LOW);
+  delay(120);
 
-  // Step 2: Light Red LED & chirp buzzer
+  // Step 2: Blink Red LED twice to confirm wiring & operation
   digitalWrite(PIN_RED_LED, HIGH);
-  soundBuzzer(true);
+  delay(180);
+  digitalWrite(PIN_RED_LED, LOW);
+  delay(120);
+  digitalWrite(PIN_RED_LED, HIGH);
+  delay(180);
+  digitalWrite(PIN_RED_LED, LOW);
+  delay(120);
+
+  // Step 3: Brief 300ms Police Siren chirp to confirm buzzer operation
+  #if defined(ESP32)
+  tone(PIN_BUZZER, 960);
+  #endif
+  digitalWrite(PIN_BUZZER, BUZZER_ON_LEVEL);
   delay(150);
-  soundBuzzer(false);
-  digitalWrite(PIN_RED_LED, LOW);
-  delay(500);
 
-  // Settle into Standby Guard State
-  digitalWrite(PIN_WHITE_LED, HIGH);
-  digitalWrite(PIN_RED_LED, LOW);
-  soundBuzzer(false);
+  #if defined(ESP32)
+  tone(PIN_BUZZER, 650);
+  #endif
+  delay(150);
 
+  // Silence buzzer immediately after test!
+  silenceBuzzer();
+
+  // Enter Standby Mode
+  currentState = STATE_STANDBY;
+  digitalWrite(PIN_RED_LED, LOW);
+  silenceBuzzer();
   drawStandbyScreen();
+
+  Serial.println(F("[SELF-TEST] Complete. System is in NORMAL STANDBY mode."));
+  Serial.println(F("[NOTE] In Standby: White LED blinks, Red LED is OFF, Buzzer is SILENT."));
+  Serial.println(F("[TIP] Type 'attack' or 'test' in Serial Monitor to test Police Siren & Red LED!"));
 
   Serial.print(F("{\"node\":\"ESP32-DEVKIT-V1\",\"status\":\"ARMED\",\"baud\":115200,\"oled\":"));
   Serial.print(oledReady ? F("\"CONNECTED\"") : F("\"DISCONNECTED\""));
@@ -358,76 +429,98 @@ void processIncomingThreatJson(const String& jsonStr) {
     currentAttackerIp = String(ipStr);
     currentAttackType = String(messageStr);
     drawThreatScreen("critical", currentAttackerIp, currentAttackType);
+    Serial.println(F("[ALARM ACTIVE] Critical attack! Red LED blinking & Police Siren sounding!"));
   } else if (lvl == "warning") {
     currentState = STATE_WARNING;
     lastThreatTime = millis();
     currentAttackerIp = String(ipStr);
     currentAttackType = String(messageStr);
     drawThreatScreen("warning", currentAttackerIp, currentAttackType);
+    Serial.println(F("[ALARM ACTIVE] Warning probe! Red LED blinking & Police Siren sounding!"));
   }
 }
 
 // -------------------------------------------------------------------------------------
-// Main Loop
+// Main Loop (Non-blocking timing)
 // -------------------------------------------------------------------------------------
 void loop() {
-  // 1. Process USB Serial commands from serial_bridge.py
+  unsigned long now = millis();
+
+  // 1. Process USB Serial commands (from Python serial_bridge.py OR Arduino Serial Monitor)
   if (Serial.available()) {
     String line = Serial.readStringUntil('\n');
     line.trim();
+
     if (line.length() > 0) {
-      processIncomingThreatJson(line);
+      if (line.equalsIgnoreCase("attack") || line.equalsIgnoreCase("test") || line.equalsIgnoreCase("siren")) {
+        // Manual test command from user in Serial Monitor
+        currentState = STATE_CRITICAL;
+        lastThreatTime = now;
+        currentAttackerIp = "192.168.1.105";
+        currentAttackType = "TEST POLICE SIREN";
+        drawThreatScreen("critical", currentAttackerIp, currentAttackType);
+        Serial.println(F("[!] MANUAL TEST ENGAGED: Red LED blinking & Police Siren sounding for 9s!"));
+      } 
+      else if (line.equalsIgnoreCase("reset") || line.equalsIgnoreCase("standby") || line.equalsIgnoreCase("stop")) {
+        // Manual reset command
+        currentState = STATE_STANDBY;
+        digitalWrite(PIN_RED_LED, LOW);
+        silenceBuzzer();
+        drawStandbyScreen();
+        Serial.println(F("[*] MANUAL RESET: Returned to Standby. White LED blinking."));
+      } 
+      else {
+        // Real-time JSON alert from serial_bridge.py
+        processIncomingThreatJson(line);
+      }
     }
   }
 
   // 2. Hardware Alarm State Machine
-  unsigned long now = millis();
-
-  if (currentState == STATE_CRITICAL) {
-    // White Guard LED OFF during active breach
+  if (currentState == STATE_CRITICAL || currentState == STATE_WARNING) {
+    // -------------------------------------------------------------------------
+    // ATTACK TIME:
+    // - White LED: Strictly OFF
+    // - Red LED:   Blinks rapidly (120ms emergency strobe)
+    // - Buzzer:    Produces POLICE SIREN sound (alternating 960Hz / 650Hz)
+    // -------------------------------------------------------------------------
     digitalWrite(PIN_WHITE_LED, LOW);
 
-    // Fast Red Strobe (120ms cycle) & Audio Siren
-    if (now - lastStrobeToggle > 120) {
-      lastStrobeToggle = now;
-      strobeState = !strobeState;
-      digitalWrite(PIN_RED_LED, strobeState ? HIGH : LOW);
-      soundBuzzer(strobeState);
+    // Red LED fast strobe
+    if (now - lastRedBlinkToggle >= 120) {
+      lastRedBlinkToggle = now;
+      redLedState = !redLedState;
+      digitalWrite(PIN_RED_LED, redLedState ? HIGH : LOW);
     }
 
-    // Auto-Reset back to Standby after alarm timeout
+    // Police Siren Sound
+    playPoliceSiren(now);
+
+    // Auto-Reset back to Normal Standby after alarm timeout (9 seconds)
     if (now - lastThreatTime > ALARM_DURATION_MS) {
       currentState = STATE_STANDBY;
       digitalWrite(PIN_RED_LED, LOW);
-      soundBuzzer(false);
-      digitalWrite(PIN_WHITE_LED, HIGH); // Restore White Guard LED
+      silenceBuzzer();
       drawStandbyScreen();
       Serial.println(F("{\"event\":\"AUTO_RESET\",\"status\":\"STANDBY\"}"));
-    }
-  } 
-  else if (currentState == STATE_WARNING) {
-    // Warning Probe: Slower pulse (300ms cycle)
-    digitalWrite(PIN_WHITE_LED, LOW);
-
-    if (now - lastStrobeToggle > 300) {
-      lastStrobeToggle = now;
-      strobeState = !strobeState;
-      digitalWrite(PIN_RED_LED, strobeState ? HIGH : LOW);
-      soundBuzzer(strobeState);
-    }
-
-    if (now - lastThreatTime > (ALARM_DURATION_MS / 2)) {
-      currentState = STATE_STANDBY;
-      digitalWrite(PIN_RED_LED, LOW);
-      soundBuzzer(false);
-      digitalWrite(PIN_WHITE_LED, HIGH);
-      drawStandbyScreen();
+      Serial.println(F("[*] Attack ended. Returned to Standby mode (White LED blinking, Buzzer silent)."));
     }
   } 
   else {
-    // Standby Mode: White LED solid ON, Red LED OFF, Buzzer OFF
-    digitalWrite(PIN_WHITE_LED, HIGH);
+    // -------------------------------------------------------------------------
+    // NORMAL TIME (STANDBY):
+    // - Red LED:   Strictly OFF
+    // - Buzzer:    Strictly SILENT (No sound)
+    // - White LED: BLINKS rhythmically (500ms ON / 500ms OFF) to indicate system armed
+    // -------------------------------------------------------------------------
     digitalWrite(PIN_RED_LED, LOW);
-    soundBuzzer(false);
+    silenceBuzzer();
+
+    // White LED rhythmic blink (heartbeat of normal operation)
+    if (now - lastWhiteBlinkToggle >= 500) {
+      lastWhiteBlinkToggle = now;
+      whiteLedState = !whiteLedState;
+      digitalWrite(PIN_WHITE_LED, whiteLedState ? HIGH : LOW);
+    }
   }
 }
