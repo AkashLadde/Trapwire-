@@ -81,9 +81,10 @@ uint8_t detectedOledAddress = 0x3C;
 
 // -------------------------------------------------------------------------------------
 // Buzzer Configuration:
-// - Standard raw buzzers and Active-HIGH modules: BUZZER_ACTIVE_LOW = false
-// - Inverted buzzer modules (screams continuously on LOW): set to true!
+// - Set BUZZER_IS_ACTIVE to true if using an Active Buzzer (has top sticker or DC buzzer)
+// - Set BUZZER_IS_ACTIVE to false if using a Passive Buzzer (piezo speaker, tone PWM)
 // -------------------------------------------------------------------------------------
+#define BUZZER_IS_ACTIVE   false
 #define BUZZER_ACTIVE_LOW  false
 
 #define BUZZER_ON_LEVEL    (BUZZER_ACTIVE_LOW ? LOW : HIGH)
@@ -134,36 +135,38 @@ const char* MARQUEE_TEXT = "   >>> TRAPWIRE CYBER RESILIENCE SHIELD ACTIVE * PER
 const int MARQUEE_LEN = 119;
 
 // -------------------------------------------------------------------------------------
-// Universal Buzzer Driver: Police Siren & Silence
+// Universal Buzzer Driver: Police Siren & Silence (Active & Passive Buzzers)
 // -------------------------------------------------------------------------------------
 void setBuzzerTone(unsigned int freq) {
-  #if defined(ESP32)
-  tone(PIN_BUZZER, freq);
-  #else
-  tone(PIN_BUZZER, freq);
-  #endif
+  if (BUZZER_IS_ACTIVE) {
+    digitalWrite(PIN_BUZZER, BUZZER_ON_LEVEL);
+  } else {
+    tone(PIN_BUZZER, freq);
+  }
 }
 
 void silenceBuzzer() {
-  #if defined(ESP32)
   noTone(PIN_BUZZER);
-  #endif
   pinMode(PIN_BUZZER, OUTPUT);
   digitalWrite(PIN_BUZZER, BUZZER_OFF_LEVEL);
 }
 
 void playPoliceSiren(unsigned long now) {
   // Police Siren: Alternates between High Tone (960 Hz) and Low Tone (650 Hz) every 250ms
-  // NOTE: We DO NOT call digitalWrite here because it cancels the PWM tone oscillation!
   if (now - lastSirenToggle >= 250) {
     lastSirenToggle = now;
     sirenToneHigh = !sirenToneHigh;
 
-    if (sirenToneHigh) {
-      setBuzzerTone(960);  // High pitch "WEE"
-    } else {
-      setBuzzerTone(650);  // Low pitch "WOO"
+    if (!BUZZER_IS_ACTIVE) {
+      // Passive Buzzer: Authentic dual-tone Police Siren wail
+      tone(PIN_BUZZER, sirenToneHigh ? 960 : 650);
     }
+  }
+
+  // Active Buzzer: Rapid tactical pulsing cadence
+  if (BUZZER_IS_ACTIVE) {
+    bool activePulse = ((now / 90) % 2) == 0;
+    digitalWrite(PIN_BUZZER, activePulse ? BUZZER_ON_LEVEL : BUZZER_OFF_LEVEL);
   }
 }
 
@@ -335,15 +338,16 @@ void renderDynamicThreat(unsigned long now) {
 
   // 2. Row 1 (Y=16): Attacker Source IP (Strictly bounded)
   display.setCursor(2, 16);
-  display.print(F("SRC: "));
-  String ipClean = currentAttackerIp.length() > 0 ? currentAttackerIp : F("185.220.101.45");
+  display.print(F("IP  : "));
+  String ipClean = currentAttackerIp.length() > 0 ? currentAttackerIp : F("185.20.209.0");
+  if (ipClean.startsWith(F("::ffff:"))) ipClean = ipClean.substring(7);
   if (ipClean.length() > 15) ipClean = ipClean.substring(0, 15);
   display.print(ipClean);
 
   // 3. Row 2 (Y=27): Attack Vector
   display.setCursor(2, 27);
-  display.print(F("VEC: "));
-  String vecClean = currentAttackType.length() > 0 ? currentAttackType : F("EXPLOIT PROBE");
+  display.print(F("ATK : "));
+  String vecClean = currentAttackType.length() > 0 ? currentAttackType : F("SQL INJECTION");
   if (vecClean.length() > 15) vecClean = vecClean.substring(0, 15);
   display.print(vecClean);
 
@@ -404,6 +408,7 @@ void updateOled(unsigned long now) {
 // -------------------------------------------------------------------------------------
 void setup() {
   Serial.begin(115200);
+  Serial.setTimeout(50); // Fast non-blocking serial reading
   delay(300);
 
   // Configure GPIO Pins
@@ -489,26 +494,74 @@ void setup() {
 // JSON Threat Stream Parser
 // -------------------------------------------------------------------------------------
 void processIncomingThreatJson(const String& jsonStr) {
+  #if ARDUINOJSON_VERSION_MAJOR >= 7
+  JsonDocument doc;
+  #else
   StaticJsonDocument<512> doc;
+  #endif
+
   DeserializationError err = deserializeJson(doc, jsonStr);
   if (err) {
+    // Fallback: check if line is a plain string containing attack terms
+    String s = jsonStr;
+    s.toLowerCase();
+    if (s.indexOf("attack") >= 0 || s.indexOf("critical") >= 0 || s.indexOf("sql") >= 0 || s.indexOf("threat") >= 0) {
+      currentState = STATE_CRITICAL;
+      lastThreatTime = millis();
+      currentAttackerIp = "185.20.209.0";
+      currentAttackType = "CYBER ATTACK";
+      Serial.println(F("[ALARM ACTIVE] Fallback plain-text threat engaged!"));
+    }
     return;
   }
 
   const char* levelStr = doc["level"] | "info";
+  const char* typeStr = doc["attack_type"] | doc["type"] | "";
   const char* messageStr = doc["message"] | "Threat event detected";
-  const char* ipStr = doc["attacker_ip"] | "185.220.101.45";
+  const char* ipStr = doc["attacker_ip"] | doc["ip"] | "185.20.209.0";
 
   String lvl = String(levelStr);
   lvl.toLowerCase();
 
-  if (lvl == "critical" || lvl == "emergency" || lvl == "warning") {
-    currentState = (lvl == "warning") ? STATE_WARNING : STATE_CRITICAL;
+  if (lvl == "critical" || lvl == "emergency" || lvl == "warning" || lvl == "high") {
+    currentState = STATE_CRITICAL;
     lastThreatTime = millis();
+
+    // 1. Clean Attacker IP
     currentAttackerIp = String(ipStr);
-    currentAttackType = String(messageStr);
-    Serial.print(F("[ALARM ACTIVE] Breach Detected: "));
-    Serial.println(currentAttackType);
+    if (currentAttackerIp.startsWith("::ffff:")) {
+      currentAttackerIp = currentAttackerIp.substring(7);
+    }
+    if (currentAttackerIp.length() > 15) {
+      currentAttackerIp = currentAttackerIp.substring(0, 15);
+    }
+
+    // 2. Clean Attack Type
+    if (strlen(typeStr) > 0) {
+      currentAttackType = String(typeStr);
+    } else {
+      String msg = String(messageStr);
+      msg.toUpperCase();
+      if (msg.indexOf("SQL") >= 0) currentAttackType = "SQL INJECTION";
+      else if (msg.indexOf("XSS") >= 0) currentAttackType = "STORED XSS";
+      else if (msg.indexOf("TRAVERSAL") >= 0 || msg.indexOf("LFI") >= 0) currentAttackType = "PATH TRAVERSAL";
+      else if (msg.indexOf("IDOR") >= 0 || msg.indexOf("BOLA") >= 0) currentAttackType = "IDOR / BOLA";
+      else if (msg.indexOf("SSRF") >= 0) currentAttackType = "SSRF EXPLOIT";
+      else if (msg.indexOf("HONEYTOKEN") >= 0) currentAttackType = "HONEYTOKEN HIT";
+      else if (msg.indexOf("EXFILTRAT") >= 0 || msg.indexOf("EXPORT") >= 0) currentAttackType = "EXFILTRATION";
+      else if (msg.indexOf("LOGIN") >= 0 || msg.indexOf("AUTH") >= 0 || msg.indexOf("BRUTE") >= 0) currentAttackType = "BRUTE FORCE";
+      else if (msg.indexOf("CANARY") >= 0) currentAttackType = "CANARY TRAP";
+      else if (msg.indexOf("TEST") >= 0) currentAttackType = "HARDWARE TEST";
+      else currentAttackType = msg.substring(0, 15);
+    }
+    if (currentAttackType.length() > 15) {
+      currentAttackType = currentAttackType.substring(0, 15);
+    }
+
+    Serial.print(F("[⚡ HARDWARE THREAT TRIGGERED] Type: "));
+    Serial.print(currentAttackType);
+    Serial.print(F(" | Attacker IP: "));
+    Serial.println(currentAttackerIp);
   }
 }
 

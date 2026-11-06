@@ -138,6 +138,17 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
     ]
   };
 
+  function getAttackerHeaders(extraHeaders = {}) {
+    let ip = state.apparentIp ? state.apparentIp.replace(/\s*\(.*\)/, "").trim() : "";
+    if (!ip || ip === "127.0.0.1") ip = "185.20.209.0";
+    return {
+      "X-Forwarded-For": ip,
+      "X-Real-IP": ip,
+      "X-Attacker-IP": ip,
+      ...extraHeaders
+    };
+  }
+
   // DOM Elements
   const termOutput = document.getElementById("termOutput");
   const termInput = document.getElementById("termInput");
@@ -538,6 +549,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
           const body = new URLSearchParams({ username: username, password: pw });
           const res = await fetch(`${API_BASE}/api/login`, {
             method: "POST",
+            headers: getAttackerHeaders({ "Content-Type": "application/x-www-form-urlencoded" }),
             body: body,
             credentials: "include"
           });
@@ -637,7 +649,9 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine(`[+] Target Endpoint: <code>GET ${API_BASE}/lab/shop/product?id=...</code>`, "cyan");
       printLine(`[+] Injection Payload: <b style="color:#f87171;">${payload}</b>`, "error");
       try {
-        const res = await fetch(`${API_BASE}/lab/shop/product?id=${encodeURIComponent(payload)}`);
+        const res = await fetch(`${API_BASE}/lab/shop/product?id=${encodeURIComponent(payload)}`, {
+          headers: getAttackerHeaders()
+        });
         const data = await res.json();
         printLine(`[*] Query the server really executed: <code>${data.executed_query}</code>`, "dim");
         if (data.error) printLine(`[!] Database error returned by the server: ${data.error}`, "warning");
@@ -673,7 +687,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       try {
         const res = await fetch(`${API_BASE}/lab/shop/review`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAttackerHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({ product_id: 1, author: "attacker", comment: payload })
         });
         const data = await res.json();
@@ -700,7 +714,9 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine("<span class='term-tag tag-warn'>[PATH-TRAVERSAL]</span> Sending REAL traversal request to the decoy lab...", "warning");
       printLine(`[+] Target: <code>GET ${API_BASE}/lab/files/download?name=${targetPath}</code>`, "cyan");
       try {
-        const res = await fetch(`${API_BASE}/lab/files/download?name=${encodeURIComponent(targetPath)}`);
+        const res = await fetch(`${API_BASE}/lab/files/download?name=${encodeURIComponent(targetPath)}`, {
+          headers: getAttackerHeaders()
+        });
         const text = await res.text();
         printLine(`[*] Server responded HTTP ${res.status}:`, "info");
         printLine(`<pre>${esc(text.slice(0, 900))}</pre>`, res.ok ? "success" : "error");
@@ -719,7 +735,9 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine("<span class='term-tag tag-warn'>[IDOR]</span> Enumerating decoy customer records with NO authorisation...", "warning");
       for (let i = 1; i <= 3; i++) {
         try {
-          const res = await fetch(`${API_BASE}/lab/api/customers/${i}`);
+          const res = await fetch(`${API_BASE}/lab/api/customers/${i}`, {
+            headers: getAttackerHeaders()
+          });
           const data = await res.json();
           printLine(`  [${i}] HTTP ${res.status} -> ${JSON.stringify(data)}`, "success");
         } catch (err) {
@@ -740,7 +758,9 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine("<span class='term-tag tag-warn'>[SSRF]</span> Asking the server to fetch a URL on our behalf...", "warning");
       printLine(`[+] URL: <code>${target}</code>`, "cyan");
       try {
-        const res = await fetch(`${API_BASE}/lab/fetch?url=${encodeURIComponent(target)}`);
+        const res = await fetch(`${API_BASE}/lab/fetch?url=${encodeURIComponent(target)}`, {
+          headers: getAttackerHeaders()
+        });
         const text = await res.text();
         printLine(`[*] Server responded HTTP ${res.status}:`, "info");
         printLine(`<pre>${esc(text.slice(0, 900))}</pre>`, res.ok ? "success" : "error");
@@ -863,7 +883,10 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       let payload = null;
       let recCount = 1;
       try {
-        const res = await fetch(`${API_BASE}/api/export`, { credentials: "include" });
+        const res = await fetch(`${API_BASE}/api/export`, {
+          headers: getAttackerHeaders(),
+          credentials: "include"
+        });
         payload = await res.json();
         if (Array.isArray(payload)) {
           recCount = payload.length;

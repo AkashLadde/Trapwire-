@@ -114,7 +114,8 @@ class HardwareBridge:
     def send_startup_ping(self):
         """Sends an initial diagnostic handshake to the ESP32."""
         payload = json.dumps({
-            "level": "warning",
+            "level": "info",
+            "attack_type": "SYSTEM READY",
             "message": "TRAPWIRE HARDWARE ONLINE",
             "attacker_ip": "127.0.0.1",
             "timestamp": int(time.time())
@@ -129,18 +130,51 @@ class HardwareBridge:
     def forward_to_mcu(self, alert: dict):
         """Formats and transmits the threat packet over USB Serial to the ESP32."""
         meta = alert.get("meta") or {}
-        attacker_ip = meta.get("attacker_ip") or meta.get("ip") or "185.220.101.45"
-        
-        # Clean non-ASCII emojis so OLED doesn't receive corrupt characters
+        attacker_ip = meta.get("attacker_ip") or meta.get("ip") or "185.20.209.0"
+        if attacker_ip in ("127.0.0.1", "localhost", "::1", "unknown"):
+            attacker_ip = "185.20.209.0"
+
         raw_msg = alert.get("message", "Threat event detected")
-        cleaned_msg = "".join(c for c in raw_msg if ord(c) < 128).strip()
-        if not cleaned_msg:
-            cleaned_msg = "INTRUSION ALERT"
+        raw_type = (meta.get("attack_type") or meta.get("type") or "").lower()
+        msg_upper = raw_msg.upper()
+
+        if "sql" in raw_type or "sql" in msg_upper:
+            atk_type = "SQL INJECTION"
+        elif "xss" in raw_type or "xss" in msg_upper:
+            atk_type = "STORED XSS"
+        elif "traversal" in raw_type or "traversal" in msg_upper or "lfi" in msg_upper:
+            atk_type = "PATH TRAVERSAL"
+        elif "idor" in raw_type or "idor" in msg_upper:
+            atk_type = "IDOR / BOLA"
+        elif "ssrf" in raw_type or "ssrf" in msg_upper:
+            atk_type = "SSRF EXPLOIT"
+        elif "honeytoken" in raw_type or "honeytoken" in msg_upper:
+            atk_type = "HONEYTOKEN HIT"
+        elif "exfiltrat" in raw_type or "export" in msg_upper:
+            atk_type = "EXFILTRATION"
+        elif "login" in raw_type or "brute" in msg_upper or "auth" in msg_upper:
+            atk_type = "BRUTE FORCE"
+        elif "canary" in raw_type or "canary" in msg_upper:
+            atk_type = "CANARY TRAP"
+        elif "test" in raw_type or "test" in msg_upper:
+            atk_type = "HARDWARE TEST"
+        else:
+            atk_type = "CYBER BREACH"
+
+        level = alert.get("level", "critical")
+        if level in ("critical", "emergency", "warning", "high"):
+            level_str = "critical"
+        else:
+            level_str = "info"
+
+        if level_str == "info":
+            return
 
         payload = json.dumps({
-            "level": alert.get("level", "info"),
-            "message": cleaned_msg[:45],
-            "attacker_ip": attacker_ip,
+            "level": level_str,
+            "attack_type": atk_type[:15],
+            "message": atk_type[:15],
+            "attacker_ip": attacker_ip[:15],
             "timestamp": int(alert.get("timestamp", time.time()))
         }) + "\n"
 

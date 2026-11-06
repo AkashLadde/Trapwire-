@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import state, data, reports, dpb, database, lab
+from app.hardware_bridge import hardware_bridge
 
 # Initialize Database (MySQL with SQLite automatic fallback)
 database.init_db()
@@ -206,6 +207,12 @@ async def broadcast_alert(alert: dict):
     for ws in dead:
         if ws in state.ADMIN_SOCKETS:
             state.ADMIN_SOCKETS.remove(ws)
+
+    # 3. Direct Physical Hardware Broadcast (ESP32 DevKit V1)
+    try:
+        hardware_bridge.broadcast_to_mcu(alert)
+    except Exception as hw_err:
+        print(f"[HARDWARE RELAY ERROR] {hw_err}")
 
 
 # ------------------------------------------------- Phase 2: lab wiring --
@@ -761,8 +768,8 @@ def hardware_status():
                 "id": "NODE-02",
                 "name": "ESP32 Threat Strobe & Siren Controller",
                 "type": "Physical Strobe & Audio Alarm",
-                "port": "COM3 / /dev/ttyUSB0 (115200 baud)",
-                "status": "ACTIVE_LISTENING",
+                "port": f"{hardware_bridge.port or 'COM7'} (115200 baud)",
+                "status": "ONLINE_ARMED" if (hardware_bridge.ser and hardware_bridge.ser.is_open) else "ACTIVE_LISTENING",
                 "last_trigger": "Standing by"
             },
             {
@@ -782,7 +789,8 @@ async def hardware_trigger_test():
     """Manual hardware test to trigger the physical siren and SOC alert stream."""
     alert = state.new_alert(
         "⚡ HARDWARE INTEGRATION TEST: Physical ESP32 Strobe Alarm activated & SOC alert broadcast.",
-        level="warning"
+        level="critical",
+        meta={"attack_type": "HARDWARE TEST", "ip": "127.0.0.1"}
     )
     await broadcast_alert(alert)
     return JSONResponse({"ok": True, "message": "Hardware test triggered successfully."})

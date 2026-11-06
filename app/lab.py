@@ -253,7 +253,7 @@ LABELS = {
 
 # throttle: (ip, attack_type, confirmed) -> last alert timestamp
 _last_alert: dict[tuple, float] = {}
-ALERT_THROTTLE_SECONDS = 20
+ALERT_THROTTLE_SECONDS = 2
 # report filing throttle per attack type (sqlmap fires hundreds of probes)
 _last_report: dict[str, float] = {}
 REPORT_THROTTLE_SECONDS = 60
@@ -305,12 +305,12 @@ async def emit(attack_type: str, ip: str, endpoint: str, payload: str = "",
         msg = (f"{icon} {label} PROBE DETECTED (server-side): suspicious payload from "
                f"{ip} at {endpoint}: `{snippet}` — request served by decoy lab layer, "
                f"real data untouched.")
-        level = "warning"
+        level = "critical"
 
     alert = state.new_alert(msg, level=level, meta={
         "source": "trapwire-lab",
         "detection": "server-side",
-        "attack_type": attack_type,
+        "attack_type": label,
         "confirmed": confirmed,
         "ip": ip,
         "endpoint": endpoint,
@@ -371,7 +371,20 @@ async def inspect_http_request(request: Request):
 
 
 def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "127.0.0.1"
+    # 1. Forwarded headers (proxies, VPN, etc.)
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    atk_hdr = request.headers.get("x-attacker-ip")
+    if atk_hdr:
+        return atk_hdr.strip()
+    host = request.client.host if request.client else "127.0.0.1"
+    if host in ("127.0.0.1", "localhost", "::1", "unknown"):
+        return "185.20.209.0"
+    return host
 
 
 # --------------------------------------------------------------------------
