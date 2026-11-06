@@ -15,56 +15,30 @@
     <div>TrapWire<span>Admin SOC Console</span></div>
   </div>
 
-  <div class="side-section-label">Workspace</div>
+  <div class="side-section-label">SOC Cyber Operations</div>
   <nav class="side-nav">
-    <button class="side-link active" data-tab="orders">
-      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h16v20l-3-2-3 2-3-2-3 2-3-2-1 2V2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/></svg>
-      Orders &amp; Customers
-    </button>
-  </nav>
-
-  {% if not suspicious %}
-  <div class="side-section-label">Business Operations</div>
-  <nav class="side-nav">
-    <button class="side-link" data-tab="projects">
-      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      Projects &amp; Projections
-    </button>
-  </nav>
-
-  <div class="side-section-label">Management &amp; Governance</div>
-  <nav class="side-nav">
-    <button class="side-link" data-tab="administration">
-      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Administration &amp; Team
-    </button>
-    <button class="side-link" data-tab="library">
-      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      Document Library
-    </button>
-    <button class="side-link" data-tab="maps">
-      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      Global Locations &amp; Maps
-    </button>
-    <button class="side-link" data-tab="support">
-      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      Support &amp; Help Center
-    </button>
-  </nav>
-
-  <div class="side-section-label">SOC &amp; Hardware Defense</div>
-  <nav class="side-nav">
-    <button class="side-link" data-tab="security">
+    <button class="side-link active" data-tab="security">
       <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
-      Security Center &amp; SOC
+      SOC &amp; Threat Intelligence
       <span class="side-dot" id="alertDot"></span>
+    </button>
+    <button class="side-link" data-tab="orders">
+      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h16v20l-3-2-3 2-3-2-3 2-3-2-1 2V2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/></svg>
+      Orders &amp; Protected Data
     </button>
     <button class="side-link" data-tab="hardware">
       <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
       Hardware Nodes &amp; IoT
     </button>
   </nav>
-  {% endif %}
+
+  <div class="side-section-label">Statutory Compliance</div>
+  <nav class="side-nav">
+    <a class="side-link" href="/dpb" target="_blank" style="text-decoration:none;">
+      <svg class="side-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      DPB Statutory Register ↗
+    </a>
+  </nav>
 
   <div class="side-foot">
     <div class="side-user">
@@ -99,11 +73,11 @@
 
   <!-- Topbar -->
   <header class="app-topbar">
-    <div class="crumb">Defender Console <span>/</span> <b id="crumbTab">Orders &amp; Customers</b></div>
+    <div class="crumb">Defender Console <span>/</span> <b id="crumbTab">SOC &amp; Threat Intelligence</b></div>
 
     <div class="topbar-search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="globalSearch" placeholder="Search orders, customers, PII records…">
+      <input type="text" id="globalSearch" placeholder="Search alerts, attacker IPs, PII records…">
     </div>
 
     <div class="topbar-actions">
@@ -146,7 +120,7 @@
   </header>
 
   <!-- 1. TAB: ORDERS & CUSTOMERS -->
-  <main class="tab-panel" id="tab-orders">
+  <main class="tab-panel hidden" id="tab-orders">
     <div class="welcome-strip">
       <h2 class="welcome-heading" id="welcomeHeading">Welcome back, {{ username }}</h2>
       <p class="muted">Customer data minimization &amp; PII protection active under DPDP Act, 2023.</p>
@@ -292,309 +266,8 @@
   </main>
 
   {% if not suspicious %}
-  <!-- 2. TAB: PROJECTS & PROJECTIONS -->
-  <main class="tab-panel hidden" id="tab-projects">
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-icon icon-indigo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        </div>
-        <div class="stat-body">
-          <div class="stat-num" id="statActiveProjects">7</div>
-          <div class="stat-label">Active Enterprise Projects</div>
-          <div class="stat-trend up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>2 added this quarter</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon icon-amber">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        </div>
-        <div class="stat-body">
-          <div class="stat-num" id="statBillableHours">1,284 hrs</div>
-          <div class="stat-label">Engineering Billable Hours</div>
-          <div class="stat-trend flat">₹186 avg. rate / hr</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon icon-green">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        </div>
-        <div class="stat-body">
-          <div class="stat-num" id="statCompletion">86%</div>
-          <div class="stat-label">On-Time Delivery SLA</div>
-          <div class="stat-trend up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>vs 81% last quarter</div>
-        </div>
-      </div>
-      <div class="stat-card stat-action">
-        <button class="btn btn-primary full" id="newProjectBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          New Project
-        </button>
-      </div>
-    </div>
-
-    <div class="proj-grid">
-      <div class="panel-card chart-card">
-        <div class="panel-card-head"><h2>Financial &amp; Revenue Projections</h2><span class="tag tag-safe">FY 2026–27</span></div>
-        <canvas id="financeChart" height="130"></canvas>
-      </div>
-      <div class="panel-card">
-        <div class="panel-card-head"><h2>Project Notifications</h2><span class="tag" style="background:var(--ent-blue-tint);color:var(--ent-blue);" id="projNotifCount">4 new</span></div>
-        <div class="notif-feed" id="projectNotifFeed">
-          <div class="notif-row">
-            <span class="notif-dot dot-indigo"></span>
-            <div><b>Milestone approved</b><p>Client sign-off received for "Retail POS Revamp" phase 2.</p><span class="notif-when">2 hours ago</span></div>
-          </div>
-          <div class="notif-row">
-            <span class="notif-dot dot-amber"></span>
-            <div><b>Budget threshold</b><p>"Warehouse Automation" has used 78% of allocated budget.</p><span class="notif-when">Yesterday</span></div>
-          </div>
-          <div class="notif-row">
-            <span class="notif-dot dot-green"></span>
-            <div><b>Timesheet submitted</b><p>14 team members logged hours for this week.</p><span class="notif-when">Yesterday</span></div>
-          </div>
-          <div class="notif-row">
-            <span class="notif-dot dot-red"></span>
-            <div><b>Deadline at risk</b><p>"Mobile App Revamp v2" is 5 days behind schedule.</p><span class="notif-when">2 days ago</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel-card" style="margin-top:18px;">
-      <div class="panel-card-head">
-        <h2>Project Overview</h2>
-        <span class="table-count" id="projTableCount">6 projects</span>
-      </div>
-      <div class="table-scroll">
-        <table class="data-table" id="projectsTable">
-          <thead>
-            <tr><th>Project</th><th>Client</th><th>Owner</th><th>Deadline</th><th>Budget</th><th>Progress</th><th>Status</th></tr>
-          </thead>
-          <tbody id="projectsTableBody">
-            <tr>
-              <td><b>Retail POS Revamp</b></td><td>TrapWire Retail</td>
-              <td><div class="cust-cell"><span class="cust-avatar">A</span>Aditi Rao</div></td>
-              <td class="mono">15 Oct 2026</td><td class="mono">₹18,50,000</td>
-              <td><div class="progress-track"><div class="progress-fill" style="width:72%;"></div></div></td>
-              <td><span class="status-pill status-shipped">On Track</span></td>
-            </tr>
-            <tr>
-              <td><b>Warehouse Automation</b></td><td>TrapWire Logistics</td>
-              <td><div class="cust-cell"><span class="cust-avatar">K</span>Karan Mehta</div></td>
-              <td class="mono">30 Nov 2026</td><td class="mono">₹42,00,000</td>
-              <td><div class="progress-track"><div class="progress-fill fill-amber" style="width:58%;"></div></div></td>
-              <td><span class="status-pill status-processing">At Risk</span></td>
-            </tr>
-            <tr>
-              <td><b>Mobile App Revamp v2</b></td><td>Internal</td>
-              <td><div class="cust-cell"><span class="cust-avatar">S</span>Sana Iqbal</div></td>
-              <td class="mono">05 Oct 2026</td><td class="mono">₹9,75,000</td>
-              <td><div class="progress-track"><div class="progress-fill fill-red" style="width:41%;"></div></div></td>
-              <td><span class="status-pill status-pending">Delayed</span></td>
-            </tr>
-            <tr>
-              <td><b>Customer Loyalty Engine</b></td><td>TrapWire Retail</td>
-              <td><div class="cust-cell"><span class="cust-avatar">R</span>Rahul Deshmukh</div></td>
-              <td class="mono">20 Dec 2026</td><td class="mono">₹26,40,000</td>
-              <td><div class="progress-track"><div class="progress-fill" style="width:33%;"></div></div></td>
-              <td><span class="status-pill status-shipped">On Track</span></td>
-            </tr>
-            <tr>
-              <td><b>Vendor Onboarding Portal</b></td><td>TrapWire B2B</td>
-              <td><div class="cust-cell"><span class="cust-avatar">P</span>Priya Das</div></td>
-              <td class="mono">12 Sep 2026</td><td class="mono">₹14,20,000</td>
-              <td><div class="progress-track"><div class="progress-fill" style="width:95%;"></div></div></td>
-              <td><span class="status-pill status-delivered">Nearly Done</span></td>
-            </tr>
-            <tr>
-              <td><b>DPDP Compliance Audit</b></td><td>Internal</td>
-              <td><div class="cust-cell"><span class="cust-avatar">V</span>Vikram Shah</div></td>
-              <td class="mono">28 Sep 2026</td><td class="mono">₹6,80,000</td>
-              <td><div class="progress-track"><div class="progress-fill" style="width:64%;"></div></div></td>
-              <td><span class="status-pill status-shipped">On Track</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </main>
-
-  <!-- 3. TAB: ADMINISTRATION & TEAM -->
-  <main class="tab-panel hidden" id="tab-administration">
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-icon icon-indigo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-        <div class="stat-body"><div class="stat-num" id="statTotalUsers">18</div><div class="stat-label">SOC Team Members</div></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg></div>
-        <div class="stat-body"><div class="stat-num">15</div><div class="stat-label">Active Sessions Today</div></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon icon-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
-        <div class="stat-body"><div class="stat-num">4</div><div class="stat-label">Configured SOC Roles</div></div>
-      </div>
-      <div class="stat-card stat-action">
-        <button class="btn btn-primary full" id="inviteUserBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
-          Invite User
-        </button>
-      </div>
-    </div>
-
-    <div class="panel-card">
-      <div class="panel-card-head"><h2>SOC Team Members &amp; Access Controls</h2><span class="table-count" id="adminTableCount">6 users</span></div>
-      <div class="table-scroll">
-        <table class="data-table" id="adminUsersTable">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th></tr></thead>
-          <tbody id="adminUsersTableBody">
-            <tr><td><div class="cust-cell"><span class="cust-avatar">A</span>Aditi Rao</div></td><td class="mono">aditi.rao@trapwire.co.in</td><td>Security Lead</td><td><span class="status-pill status-delivered">Active</span></td><td class="mono">Today, 9:14 AM</td></tr>
-            <tr><td><div class="cust-cell"><span class="cust-avatar">K</span>Karan Mehta</div></td><td class="mono">karan.mehta@trapwire.co.in</td><td>Manager</td><td><span class="status-pill status-delivered">Active</span></td><td class="mono">Today, 8:02 AM</td></tr>
-            <tr><td><div class="cust-cell"><span class="cust-avatar">S</span>Sana Iqbal</div></td><td class="mono">sana.iqbal@trapwire.co.in</td><td>SOC Analyst</td><td><span class="status-pill status-delivered">Active</span></td><td class="mono">Yesterday, 6:45 PM</td></tr>
-            <tr><td><div class="cust-cell"><span class="cust-avatar">R</span>Rahul Deshmukh</div></td><td class="mono">rahul.deshmukh@trapwire.co.in</td><td>Viewer</td><td><span class="status-pill status-processing">Invited</span></td><td class="mono">—</td></tr>
-            <tr><td><div class="cust-cell"><span class="cust-avatar">P</span>Priya Das</div></td><td class="mono">priya.das@trapwire.co.in</td><td>Compliance Officer</td><td><span class="status-pill status-delivered">Active</span></td><td class="mono">2 days ago</td></tr>
-            <tr><td><div class="cust-cell"><span class="cust-avatar">V</span>Vikram Shah</div></td><td class="mono">vikram.shah@trapwire.co.in</td><td>Analyst</td><td><span class="status-pill status-pending">Suspended</span></td><td class="mono">12 days ago</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="proj-grid" style="margin-top:18px;">
-      <div class="panel-card">
-        <div class="panel-card-head"><h2>Roles &amp; Permissions Matrix</h2></div>
-        <div class="role-list">
-          <div class="role-row"><span class="role-badge role-admin">Administrator</span><span class="muted small">Full access — users, billing, security settings</span><span class="mono small">1 member</span></div>
-          <div class="role-row"><span class="role-badge role-manager">Manager</span><span class="muted small">Manage projects, view financials, invite viewers</span><span class="mono small">2 members</span></div>
-          <div class="role-row"><span class="role-badge role-analyst">Analyst</span><span class="muted small">Read/write on assigned projects only</span><span class="mono small">2 members</span></div>
-          <div class="role-row"><span class="role-badge role-viewer">Viewer</span><span class="muted small">Read-only dashboard access</span><span class="mono small">1 member</span></div>
-        </div>
-      </div>
-      <div class="panel-card">
-        <div class="panel-card-head"><h2>System Security &amp; Audit Toggles</h2></div>
-        <div class="toggle-row"><div><b>Enforce 2FA for all admins</b><p class="muted small">Require an authenticator app at login.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
-        <div class="toggle-row"><div><b>Auto session timeout</b><p class="muted small">Sign out idle sessions after 30 minutes.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
-        <div class="toggle-row"><div><b>Real-Time SOC Broadcast Alerts</b><p class="muted small">Broadcast live threat events across active SOC consoles.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
-        <div class="toggle-row"><div><b>Audit logging</b><p class="muted small">Record every admin action for compliance review.</p></div><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
-      </div>
-    </div>
-  </main>
-
-  <!-- 4. TAB: DOCUMENT LIBRARY -->
-  <main class="tab-panel hidden" id="tab-library">
-    <div class="panel-card-head" style="margin-bottom:16px;">
-      <h2 style="font-size:1.1rem;">Governance &amp; Document Library</h2>
-      <div class="table-search" style="max-width:260px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="libSearch" placeholder="Search documents…">
-      </div>
-    </div>
-    <div class="filter-chips" id="libChips" style="margin-bottom:16px;">
-      <button class="filter-chip active" data-cat="all">All Documents</button>
-      <button class="filter-chip" data-cat="Policy">Policies</button>
-      <button class="filter-chip" data-cat="Template">Templates</button>
-      <button class="filter-chip" data-cat="Report">Reports</button>
-      <button class="filter-chip" data-cat="Training">Training Modules</button>
-    </div>
-    <div class="doc-grid" id="docGrid">
-      <!-- Injected by workspace.js -->
-    </div>
-  </main>
-
-  <!-- 5. TAB: GLOBAL MAPS -->
-  <main class="tab-panel hidden" id="tab-maps">
-    <div class="panel-card-head" style="margin-bottom:16px;">
-      <h2 style="font-size:1.1rem;">Global Presence &amp; Regional Operations</h2>
-      <span class="tag tag-safe">2 Primary Hubs</span>
-    </div>
-    <div class="map-grid">
-      <div class="map-card">
-        <div class="map-card-head"><span class="map-badge map-badge-hq">Main Headquarters</span><h3>TrapWire Pvt Ltd — Singapore</h3></div>
-        <iframe class="map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-          src="https://www.google.com/maps?q=Marina+Bay+Financial+Centre+Singapore&z=15&output=embed"></iframe>
-        <div class="map-card-body">
-          <p><svg class="map-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Marina Bay Financial Centre, 8 Marina Blvd, Singapore 018981</p>
-          <p><svg class="map-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> SGT (UTC+8) · Mon–Fri, 9:00 AM – 6:00 PM SGT</p>
-        </div>
-      </div>
-      <div class="map-card">
-        <div class="map-card-head"><span class="map-badge map-badge-branch">Technology Development Hub</span><h3>TrapWire Pvt Ltd — Bidar</h3></div>
-        <iframe class="map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-          src="https://www.google.com/maps?q=Bidar+Karnataka+India&z=13&output=embed"></iframe>
-        <div class="map-card-body">
-          <p><svg class="map-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> IT Park Road, Bidar, Karnataka 585401, India</p>
-          <p><svg class="map-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> IST (UTC+5:30) · Mon–Fri, 9:30 AM – 6:30 PM IST</p>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <!-- 6. TAB: SUPPORT & HELP -->
-  <main class="tab-panel hidden" id="tab-support">
-    <div class="support-grid">
-      <div class="panel-card support-contact-card">
-        <div class="support-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
-        <div><div class="stat-label">24/7 Helpline</div><div class="support-value">+91 74836 55370</div></div>
-      </div>
-      <div class="panel-card support-contact-card">
-        <div class="support-icon icon-indigo-solid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg></div>
-        <div><div class="stat-label">Email Support</div><div class="support-value">support@trapwire.co.in</div></div>
-      </div>
-      <div class="panel-card support-contact-card">
-        <div class="support-icon icon-green-solid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-        <div><div class="stat-label">Support Hours</div><div class="support-value">Mon–Sat, 9 AM – 9 PM IST</div></div>
-      </div>
-    </div>
-
-    <div class="proj-grid" style="margin-top:18px;">
-      <div class="panel-card">
-        <div class="panel-card-head"><h2>Raise a Support &amp; Incident Ticket</h2></div>
-        <form id="supportForm">
-          <label>Subject</label>
-          <input type="text" id="supSubject" required placeholder="Briefly describe the issue or anomaly">
-          <label>Category</label>
-          <select id="supCategory">
-            <option>Security / Deception Anomaly</option>
-            <option>Technical Issue</option>
-            <option>DPDP Compliance Inquiry</option>
-            <option>Hardware Node Setup</option>
-            <option>Other</option>
-          </select>
-          <label>Message</label>
-          <textarea id="supMessage" rows="4" required placeholder="Provide technical details…"></textarea>
-          <button class="btn btn-primary" type="submit" style="margin-top:14px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            Submit Ticket
-          </button>
-          <p id="supportMsg" class="msg"></p>
-        </form>
-      </div>
-      <div class="panel-card">
-        <div class="panel-card-head"><h2>Frequently Asked Questions</h2></div>
-        <div class="faq-list" id="faqList">
-          <div class="faq-item">
-            <button class="faq-q">How is customer PII protected in this console? <span>+</span></button>
-            <div class="faq-a">All Aadhaar, PAN, phone, email and card fields are masked by default in every view, following DPDP Act, 2023 data-minimization guidance.</div>
-          </div>
-          <div class="faq-item">
-            <button class="faq-q">What happens when an attacker attempts brute-force login? <span>+</span></button>
-            <div class="faq-a">After 3 failed attempts, the session is isolated to decoy honeypot tables, real-time alerts are logged to the SOC Security Center, and a live alert banner displays in this console.</div>
-          </div>
-          <div class="faq-item">
-            <button class="faq-q">How does the hardware integration work? <span>+</span></button>
-            <div class="faq-a">TrapWire integrates with Raspberry Pi edge honeypot nodes and ESP32 physical strobe sirens/buzzers via Serial/Wi-Fi for physical telemetry.</div>
-          </div>
-          <div class="faq-item">
-            <button class="faq-q">Where can I view auto-submitted statutory reports? <span>+</span></button>
-            <div class="faq-a">Open the Security Center tab or click the DPB Statutory Register link to view acknowledged regulatory compliance submissions.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <!-- 7. TAB: SECURITY CENTER & SOC TELEMETRY -->
-  <main class="tab-panel hidden" id="tab-security">
+  <!-- 2. TAB: SECURITY CENTER & SOC TELEMETRY (Primary Command Center) -->
+  <main class="tab-panel" id="tab-security">
     
     <!-- SOC COMMAND HEADER & REAL-TIME STATUS BAR -->
     <div class="soc-command-bar">
@@ -1052,73 +725,6 @@
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="newProjectModal">
-  <div class="modal-box">
-    <div class="modal-head"><h3>Create New Project</h3><button class="modal-close" id="closeProjectModal">&times;</button></div>
-    <form id="newProjectForm">
-      <label>Project name</label>
-      <input type="text" id="npName" required placeholder="e.g. Loyalty App Redesign">
-      <label>Client</label>
-      <input type="text" id="npClient" required placeholder="e.g. TrapWire Retail">
-      <label>Owner</label>
-      <input type="text" id="npOwner" required placeholder="e.g. Aditi Rao">
-      <label>Deadline</label>
-      <input type="date" id="npDeadline" required>
-      <label>Budget (₹)</label>
-      <input type="number" id="npBudget" required min="0" placeholder="e.g. 1200000">
-      <button class="btn btn-primary full" type="submit" style="margin-top:16px;">Create Project</button>
-    </form>
-  </div>
-</div>
-
-<div class="modal-overlay hidden" id="inviteUserModal">
-  <div class="modal-box">
-    <div class="modal-head"><h3>Invite Team Member</h3><button class="modal-close" id="closeInviteModal">&times;</button></div>
-    <form id="inviteUserForm">
-      <label>Full name</label>
-      <input type="text" id="iuName" required placeholder="e.g. Neha Kulkarni">
-      <label>Work email</label>
-      <input type="email" id="iuEmail" required placeholder="name@trapwire.co.in">
-      <label>Role</label>
-      <select id="iuRole">
-        <option>Viewer</option>
-        <option>SOC Analyst</option>
-        <option>Manager</option>
-        <option>Security Lead</option>
-        <option>Administrator</option>
-      </select>
-      <button class="btn btn-primary full" type="submit" style="margin-top:16px;">Send Invite</button>
-    </form>
-  </div>
-</div>
-<div class="toast hidden" id="workspaceToast"></div>
-
-<!-- INTERACTIVE DOCUMENT READER MODAL -->
-<div class="doc-reader-modal hidden" id="docReaderModal">
-  <div class="doc-reader-box">
-    <div class="doc-reader-header">
-      <div class="doc-reader-header-left">
-        <span class="doc-badge-pill policy" id="docReaderBadge">POLICY</span>
-        <div>
-          <h3 class="doc-reader-title" id="docReaderHeading">Data Protection &amp; Privacy Policy</h3>
-          <div class="doc-reader-meta" id="docReaderMeta">DPDP Act, 2023 Compliance Framework · 5 min read</div>
-        </div>
-      </div>
-      <button class="doc-reader-close-btn" onclick="closeDocReader()">&times;</button>
-    </div>
-    <div class="doc-reader-body" id="docReaderBody">
-      <!-- Rich interactive article content injected by workspace.js -->
-    </div>
-    <div class="doc-reader-footer">
-      <span style="font-size:0.8rem;color:#64748B;">TrapWire Pvt Ltd · Governance &amp; Compliance Portal</span>
-      <button class="doc-reader-footer-btn" onclick="showToast('Document downloaded (PDF export).')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download Document (PDF)
-      </button>
-    </div>
-  </div>
-</div>
-
 <!-- FORENSIC INCIDENT INSPECTOR MODAL -->
 <div class="modal-overlay hidden" id="forensicModal" style="z-index:10000;">
   <div class="modal-box" style="max-width:680px;background:#0d1527;border:1px solid rgba(239,68,68,0.4);box-shadow:0 25px 70px rgba(0,0,0,0.8), 0 0 40px rgba(239,68,68,0.25);">
@@ -1252,7 +858,7 @@ function triggerHardwareTest() {
 <script src="/static/js/company.js?v={{ range(1000, 99999)|random }}"></script>
 <script>window.SUSPICIOUS = {{ 'true' if suspicious else 'false' }};</script>
 {% if not suspicious %}
-<script src="/static/js/workspace.js?v={{ range(1000, 99999)|random }}"></script>
+
 {% endif %}
 </body>
 </html>

@@ -92,7 +92,6 @@ void playPoliceSiren(unsigned long now) {
     } else {
       tone(PIN_BUZZER, 650);
     }
-    digitalWrite(PIN_BUZZER, BUZZER_ON_LEVEL);
   }
 }
 

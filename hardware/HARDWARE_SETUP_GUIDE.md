@@ -199,25 +199,34 @@ If you have a **NodeMCU ESP8266** with discrete **White LED**, **Red LED**, **0.
 6. Click **Upload** (➡️ arrow icon).
    - *Pro Tip*: If Arduino IDE shows `Connecting........_____.....`, press and hold the **BOOT** button on the ESP32 for 1-2 seconds until the percentage counter appears, then release it.
 7. Once uploaded:
-   - **Self-Test Routine**: White LED blinks twice, Red LED blinks twice, and buzzer gives a brief 300ms chirp.
-   - **Standby Mode**:
-     - The **White LED** will **blink rhythmically** (500ms ON / 500ms OFF) to indicate the system is armed.
+   - **Self-Test Routine**: ESP32 plays a 3-tone power-on chime (`880Hz -> 1175Hz -> 1760Hz`), blinks the White LED and Red LED, and initializes the dynamic display.
+   - **Standby Mode (Normal)**:
+     - The **White LED** will **blink rhythmically** (500ms ON / 500ms OFF) to indicate system armed.
      - The **Red LED** is **strictly OFF**.
-     - The **Buzzer** is **strictly SILENT**.
-     - The **OLED** displays `TRAPWIRE DEFENDER - STATUS: ARMED & READY`.
-   - **Attack Mode** (when an attack hits or when testing):
-     - The **White LED** turns OFF.
-     - The **Red LED** blinks in an **emergency strobe** (120ms ON / 120ms OFF).
+     - The **Buzzer** is **completely SILENT**.
+     - The **0.96" OLED** renders a **Dynamic Animated HUD**:
+       - Animated rotating radar sweep indicator `[/]` `[-]` `[\]` `[|]` in the header bar.
+       - Pulsing `[*] ARMED` indicator synchronized with the White LED.
+       - Live ticking UPTIME counter (`UP: HH:MM:SS`) updating in real-time.
+       - Smooth horizontal scrolling security marquee at the bottom.
+       - Guaranteed zero text overlap with strict row coordinate separation.
+   - **Attack Mode (Intrusion Detected or Tested)**:
+     - The **White LED** turns OFF immediately.
+     - The **Red LED** blinks in an **emergency tactical strobe** (120ms ON / 120ms OFF).
      - The **Buzzer** sounds an authentic **Police Siren** (alternating 960Hz / 650Hz dual-tone wail).
-     - The **OLED** displays `! CRITICAL BREACH !` with attacker IP and exploit vector.
-     - Automatically resets back to Standby after 9 seconds.
+     - The **OLED** renders a high-alert breach screen:
+       - Alternating flashing emergency banner (`! CRITICAL BREACH !`).
+       - Attacker source IP and exploit vector.
+       - Real-time animated lockdown progress bar counting down from 9s to 0s.
+       - Flashing perimeter threat border.
+     - Automatically resets back to Standby after 9 seconds of inactivity.
 
 ### Quick Testing in Arduino IDE (Serial Monitor)
-You can test the siren, OLED, and LEDs directly inside the Arduino IDE without even running the server:
+You can test the siren, dynamic OLED, and LEDs directly inside the Arduino IDE without running the server:
 1. In Arduino IDE, click *Tools > Serial Monitor* and set the baud rate to **115200** (with *Newline* or *Both NL & CR*).
 2. Type `attack` or `test` or `siren` and press **Enter**:
-   - The ESP32 immediately turns OFF the white LED, begins strobing the red LED, sounds the police siren, and renders the incident screen on the OLED for 9 seconds!
-3. Type `reset` or `standby` to return immediately to Standby mode (white LED blinking, buzzer silent).
+   - The ESP32 immediately turns OFF the white LED, strobes the red LED, wails the police siren, flashes the breach banner, and animates the 9-second lockdown progress bar on the OLED!
+3. Type `reset` or `standby` to return immediately to Standby mode (white LED blinking, dynamic radar/marquee, buzzer silent).
 
 ### Option 2: Uploading to NodeMCU (ESP8266)
 1. Open the [Arduino IDE](https://www.arduino.cc/en/software).

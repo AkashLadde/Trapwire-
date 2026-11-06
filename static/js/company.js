@@ -1,17 +1,25 @@
 // Sidebar nav switching
 const crumbTab = document.getElementById("crumbTab");
 const tabLabels = {
-  orders: "Orders & Customers", 
-  security: "Security Center & SOC",
-  projects: "Projects & Projections",
-  administration: "Administration & Team", 
-  library: "Document Library",
-  maps: "Global Locations & Maps", 
-  support: "Support & Help Center",
+  security: "SOC & Threat Intelligence",
+  orders: "Orders & Protected Data", 
   hardware: "Physical Hardware Nodes & IoT"
 };
+
+// Global lightweight toast notification
+window.showToast = function(msg) {
+  const stack = document.getElementById("liveToastStack") || document.body;
+  const t = document.createElement("div");
+  t.className = "toast show";
+  t.style.cssText = "position:fixed;bottom:24px;right:24px;background:#0f172a;color:#38bdf8;border:1px solid #0284c7;padding:12px 20px;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.5);z-index:99999;font-weight:600;font-size:0.88rem;";
+  t.textContent = msg;
+  stack.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+};
+
 document.querySelectorAll(".side-link").forEach(btn => {
   btn.addEventListener("click", () => {
+    if (!btn.dataset.tab) return;
     document.querySelectorAll(".side-link").forEach(b => b.classList.remove("active"));
     document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
     btn.classList.add("active");
@@ -21,6 +29,7 @@ document.querySelectorAll(".side-link").forEach(btn => {
     if (btn.dataset.tab === "security") {
       const dot = document.getElementById("alertDot");
       if (dot) dot.classList.remove("show");
+      if (threatChart) threatChart.resize();
     }
     // Close mobile sidebar if open
     const sidebar = document.getElementById("appSidebar");
@@ -29,9 +38,19 @@ document.querySelectorAll(".side-link").forEach(btn => {
     }
   });
 });
-// orders tab visible by default
-const ordersTab = document.getElementById("tab-orders");
-if (ordersTab) ordersTab.classList.remove("hidden");
+
+// Default active tab on boot: Security Center (or Orders for suspicious session)
+const securityTab = document.getElementById("tab-security");
+if (securityTab && !window.SUSPICIOUS) {
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
+  securityTab.classList.remove("hidden");
+  document.querySelector('.side-link[data-tab="security"]')?.classList.add("active");
+  document.querySelector('.side-link[data-tab="orders"]')?.classList.remove("active");
+  if (crumbTab) crumbTab.textContent = "SOC & Threat Intelligence";
+} else {
+  const ordersTab = document.getElementById("tab-orders");
+  if (ordersTab) ordersTab.classList.remove("hidden");
+}
 
 // ---- Orders table: search + status filter + value sort ----
 const ordersTable = document.getElementById("ordersTable");
