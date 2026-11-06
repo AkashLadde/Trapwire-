@@ -225,8 +225,6 @@ void processIncomingThreatJson(const String& jsonStr) {
 }
 
 void loop() {
-  unsigned long now = millis();
-
   // 1. Read JSON Commands / Manual Test Commands from USB Serial
   if (Serial.available()) {
     String line = Serial.readStringUntil('\n');
@@ -234,7 +232,7 @@ void loop() {
     if (line.length() > 0) {
       if (line.equalsIgnoreCase("attack") || line.equalsIgnoreCase("test") || line.equalsIgnoreCase("siren")) {
         currentState = STATE_CRITICAL;
-        lastThreatTime = now;
+        lastThreatTime = millis();
         currentAttackerIp = "192.168.1.105";
         currentAttackType = "TEST POLICE SIREN";
         drawThreatScreen("critical", currentAttackerIp, currentAttackType);
@@ -248,6 +246,9 @@ void loop() {
       }
     }
   }
+
+  // Refresh now AFTER serial reading
+  unsigned long now = millis();
 
   // 2. Hardware Alarm State Machine
   if (currentState == STATE_CRITICAL || currentState == STATE_WARNING) {
@@ -265,7 +266,7 @@ void loop() {
     playPoliceSiren(now);
 
     // Auto-Reset back to Standby after alarm duration expires
-    if (now - lastThreatTime > ALARM_DURATION_MS) {
+    if (now >= lastThreatTime && (now - lastThreatTime) >= ALARM_DURATION_MS) {
       currentState = STATE_STANDBY;
       digitalWrite(PIN_RED_LED, LOW);
       silenceBuzzer();

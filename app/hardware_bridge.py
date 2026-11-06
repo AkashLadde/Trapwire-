@@ -71,12 +71,18 @@ class MCUHardwareManager:
                             s.port = target_port
                             s.baudrate = self.baud
                             s.timeout = 0.5
+                            s.write_timeout = 1.0
                             s.dtr = False
                             s.rts = False
                             s.open()
+                            try:
+                                s.reset_input_buffer()
+                                s.reset_output_buffer()
+                            except Exception:
+                                pass
                             self.ser = s
                             self.port = target_port
-                            print(f"[+] [HARDWARE BRIDGE] Connected to ESP32 on {self.port} @ {self.baud} baud.")
+                            print(f"[+] [HARDWARE BRIDGE] Connected to ESP32 on {self.port} @ {self.baud} baud.", flush=True)
                         except Exception:
                             self.ser = None
                             time.sleep(2.0)
@@ -92,21 +98,45 @@ class MCUHardwareManager:
                 # 3. Transmit over serial
                 if self.ser and self.ser.is_open:
                     line = json.dumps(packet) + "\n"
-                    try:
-                        self.ser.write(line.encode("ascii", errors="ignore"))
-                        self.ser.flush()
-                        print(f"[MCU ALERT TRANSMITTED -> ESP32] {line.strip()}")
-                    except Exception as e:
-                        print(f"[!] [HARDWARE SERIAL WRITE ERROR] {e}")
+                    success = False
+                    for attempt in range(2):
                         try:
-                            self.ser.close()
-                        except Exception:
-                            pass
-                        self.ser = None
+                            self.ser.write(line.encode("ascii", errors="ignore"))
+                            self.ser.flush()
+                            print(f"[MCU ALERT TRANSMITTED -> ESP32] {line.strip()}", flush=True)
+                            success = True
+                            break
+                        except Exception as e:
+                            print(f"[!] [HARDWARE SERIAL WRITE RETRY] {e}", flush=True)
+                            try:
+                                self.ser.close()
+                            except Exception:
+                                pass
+                            self.ser = None
+                            # Re-open if possible on attempt 0
+                            if attempt == 0:
+                                time.sleep(0.1)
+                                target_port = self.port or self.auto_detect_port()
+                                if target_port:
+                                    try:
+                                        s = serial.Serial()
+                                        s.port = target_port
+                                        s.baudrate = self.baud
+                                        s.timeout = 0.5
+                                        s.write_timeout = 1.0
+                                        s.dtr = False
+                                        s.rts = False
+                                        s.open()
+                                        self.ser = s
+                                    except Exception:
+                                        self.ser = None
+                    if not success:
+                        print(f"[VIRTUAL HARDWARE RELAY (SERIAL FAILED)] {packet}", flush=True)
                 else:
-                    print(f"[VIRTUAL HARDWARE RELAY] {packet}")
+                    print(f"[VIRTUAL HARDWARE RELAY] {packet}", flush=True)
 
-            except Exception:
+            except Exception as e:
+                print(f"[!] [SERIAL WORKER EXCEPTION] {e}", flush=True)
                 time.sleep(1.0)
 
     def format_threat_packet(self, alert: dict) -> dict:

@@ -81,10 +81,11 @@ uint8_t detectedOledAddress = 0x3C;
 
 // -------------------------------------------------------------------------------------
 // Buzzer Configuration:
-// - Set BUZZER_IS_ACTIVE to true if using an Active Buzzer (has top sticker or DC buzzer)
-// - Set BUZZER_IS_ACTIVE to false if using a Passive Buzzer (piezo speaker, tone PWM)
+// - isBuzzerActive = false: Passive Buzzer (default, dual-tone 960Hz / 650Hz AC wave)
+// - isBuzzerActive = true:  Active Buzzer (internal oscillator, DC pulse cadence)
+// Can also be toggled at runtime via Serial command: type "active" or "passive"
 // -------------------------------------------------------------------------------------
-#define BUZZER_IS_ACTIVE   false
+bool isBuzzerActive = false;
 #define BUZZER_ACTIVE_LOW  false
 
 #define BUZZER_ON_LEVEL    (BUZZER_ACTIVE_LOW ? LOW : HIGH)
@@ -138,7 +139,7 @@ const int MARQUEE_LEN = 119;
 // Universal Buzzer Driver: Police Siren & Silence (Active & Passive Buzzers)
 // -------------------------------------------------------------------------------------
 void setBuzzerTone(unsigned int freq) {
-  if (BUZZER_IS_ACTIVE) {
+  if (isBuzzerActive) {
     digitalWrite(PIN_BUZZER, BUZZER_ON_LEVEL);
   } else {
     tone(PIN_BUZZER, freq);
@@ -157,15 +158,16 @@ void playPoliceSiren(unsigned long now) {
     lastSirenToggle = now;
     sirenToneHigh = !sirenToneHigh;
 
-    if (!BUZZER_IS_ACTIVE) {
+    if (!isBuzzerActive) {
       // Passive Buzzer: Authentic dual-tone Police Siren wail
       tone(PIN_BUZZER, sirenToneHigh ? 960 : 650);
     }
   }
 
   // Active Buzzer: Rapid tactical pulsing cadence
-  if (BUZZER_IS_ACTIVE) {
-    bool activePulse = ((now / 90) % 2) == 0;
+  if (isBuzzerActive) {
+    int pulseRate = sirenToneHigh ? 70 : 130;
+    bool activePulse = ((now / pulseRate) % 2) == 0;
     digitalWrite(PIN_BUZZER, activePulse ? BUZZER_ON_LEVEL : BUZZER_OFF_LEVEL);
   }
 }
@@ -352,7 +354,8 @@ void renderDynamicThreat(unsigned long now) {
   display.print(vecClean);
 
   // 4. Row 3 (Y=38): Live Countdown & Graphical Progress Bar
-  unsigned long elapsed = now - lastThreatTime;
+  // CRITICAL: Safe unsigned calculation prevents wrap-around underflow
+  unsigned long elapsed = (now >= lastThreatTime) ? (now - lastThreatTime) : 0;
   int remainingSecs = 9;
   if (elapsed < ALARM_DURATION_MS) {
     remainingSecs = (ALARM_DURATION_MS - elapsed) / 1000 + 1;
@@ -569,8 +572,6 @@ void processIncomingThreatJson(const String& jsonStr) {
 // Main Loop (100% Non-blocking timing)
 // -------------------------------------------------------------------------------------
 void loop() {
-  unsigned long now = millis();
-
   // 1. Process USB Serial commands
   if (Serial.available()) {
     String line = Serial.readStringUntil('\n');
@@ -580,7 +581,7 @@ void loop() {
       if (line.equalsIgnoreCase("attack") || line.equalsIgnoreCase("test") || line.equalsIgnoreCase("siren")) {
         // Manual test command from user in Serial Monitor
         currentState = STATE_CRITICAL;
-        lastThreatTime = now;
+        lastThreatTime = millis();
         currentAttackerIp = "192.168.1.105";
         currentAttackType = "TEST POLICE SIREN";
         Serial.println(F("[!] MANUAL TEST ENGAGED: Red LED blinking & Police Siren sounding for 9s!"));
@@ -592,12 +593,23 @@ void loop() {
         silenceBuzzer();
         Serial.println(F("[*] MANUAL RESET: Returned to Standby. White LED blinking."));
       } 
+      else if (line.equalsIgnoreCase("active") || line.equalsIgnoreCase("buzzer:active")) {
+        isBuzzerActive = true;
+        Serial.println(F("[BUZZER] Switched to ACTIVE BUZZER mode (DC pulse cadence)."));
+      }
+      else if (line.equalsIgnoreCase("passive") || line.equalsIgnoreCase("buzzer:passive")) {
+        isBuzzerActive = false;
+        Serial.println(F("[BUZZER] Switched to PASSIVE BUZZER mode (960Hz/650Hz dual tone)."));
+      }
       else {
-        // Real-time JSON alert from serial_bridge.py
+        // Real-time JSON alert from serial_bridge.py / hardware_bridge.py
         processIncomingThreatJson(line);
       }
     }
   }
+
+  // CRITICAL FIX: Refresh 'now' AFTER reading serial so that now >= lastThreatTime is ALWAYS true!
+  unsigned long now = millis();
 
   // 2. Hardware Alarm State Machine
   if (currentState == STATE_CRITICAL || currentState == STATE_WARNING) {
@@ -618,7 +630,8 @@ void loop() {
     playPoliceSiren(now);
 
     // Auto-Reset back to Normal Standby after alarm timeout (9 seconds)
-    if (now - lastThreatTime > ALARM_DURATION_MS) {
+    // CRITICAL FIX: Safe unsigned comparison guards against 32-bit wrap-around underflow!
+    if (now >= lastThreatTime && (now - lastThreatTime) >= ALARM_DURATION_MS) {
       currentState = STATE_STANDBY;
       digitalWrite(PIN_RED_LED, LOW);
       silenceBuzzer();

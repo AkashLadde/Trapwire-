@@ -96,10 +96,14 @@ If your buzzer produces a continuous sound immediately upon powering on:
      #define BUZZER_ACTIVE_LOW  true
      ```
    - Re-upload the sketch to your ESP32.
-2. **Active vs. Passive Buzzer**:
-   - **Active Buzzer** (has a sticker on top and sealed epoxy bottom): Generates its own tone when DC voltage is applied. Driven by `digitalWrite()`.
-   - **Passive Buzzer** (exposed green PCB backing): Requires an AC frequency signal to generate tone. Driven by `tone(PIN_BUZZER, freq)`.
-   - The updated firmware automatically handles **both** passive and active buzzers by simultaneously pulsing `tone()` frequency and driving the digital GPIO level!
+2. **Active vs. Passive Buzzer Modes**:
+   - **Passive Buzzer** (exposed green PCB backing): Requires an AC frequency signal to generate tone. Driven by `tone(PIN_BUZZER, freq)` at alternating 960Hz / 650Hz.
+   - **Active Buzzer** (has a sticker on top and sealed epoxy bottom): Has its own internal 2.4kHz oscillator. Driven by rapid DC pulse cadence.
+   - **Runtime Toggle:** In the Arduino Serial Monitor (115200 baud), you can simply type:
+     - `passive` $\rightarrow$ switches to Passive Buzzer mode (dual-tone police siren wail)
+     - `active` $\rightarrow$ switches to Active Buzzer mode (tactical pulsing siren)
+     - `test` $\rightarrow$ fires an instant 9-second hardware alarm test!
+   - You can also change the default in the sketch (`bool isBuzzerActive = false;` or `true`).
 3. **3-Pin Buzzer Modules**:
    - If using a 3-pin module labeled `S`, `+`, `-`:
      - `S` (Signal) $\rightarrow$ ESP32 `D23`
