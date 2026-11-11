@@ -28,7 +28,18 @@ templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templa
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 templates = Jinja2Templates(directory=templates_dir)
 
-TARGET_COMPANY_URL = os.getenv("COMPANY_URL", "http://127.0.0.1:8080")
+DEFENDER_PORT = os.getenv("DEFENDER_PORT", "8080")
+
+
+def _resolve_target_api_base(request: Request) -> str:
+    """Resolve defender backend URL from COMPANY_URL or derive dynamically from request host."""
+    explicit = os.getenv("COMPANY_URL", "").strip().rstrip("/")
+    if explicit:
+        return explicit
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "http"
+    host = (request.url.hostname or "127.0.0.1").strip()
+    return f"{scheme}://{host}:{DEFENDER_PORT}"
+
 
 # [SYNTHETIC LAB SIMULATOR] RFC 5737 TEST-NET addresses for simulated exit nodes
 VPN_NODES = [
@@ -56,7 +67,8 @@ ATTACK_WORDLIST = [
 def attacker_login_page(request: Request):
     return templates.TemplateResponse("attacker_login.html", {
         "request": request,
-        "target_api_base": TARGET_COMPANY_URL,
+        "target_api_base": _resolve_target_api_base(request),
+        "console_url": "/console",
         "target_username": "admin"
     })
 
@@ -70,8 +82,8 @@ def attacker_console(request: Request):
         "target_username": "admin",
         "wordlist": ATTACK_WORDLIST,
         "vpn_nodes": VPN_NODES,
-        "show_login": False,
-        "target_api_base": TARGET_COMPANY_URL
+        "target_api_base": _resolve_target_api_base(request),
+        "login_url": "/login",
     })
 
 

@@ -340,7 +340,7 @@ def landing(request: Request):
     return templates.TemplateResponse("index.html", {
         "request": request,
         "company_url": f"{base}/company/login",
-        "attacker_url": f"{base}/attacker"
+        "attacker_url": f"{base}/attacker/login"
     })
 
 
@@ -357,6 +357,7 @@ def attacker_login_page(request: Request):
     return templates.TemplateResponse("attacker_login.html", {
         "request": request,
         "target_api_base": base,
+        "console_url": "/attacker/console",
         "target_username": "admin"
     })
 
@@ -369,8 +370,8 @@ def attacker_console_page(request: Request):
         "request": request,
         "target_username": "admin",
         "wordlist": ["123456", "password", "admin123", "admin@123", "Welcome@123", "qwerty123", "Admin@2026!", "letmein123"],
-        "show_login": False,
-        "target_api_base": base
+        "target_api_base": base,
+        "login_url": "/attacker/login",
     })
 
 

@@ -3,7 +3,7 @@
    Professional Cybersecurity Red Cyber Spiderweb HUD & Terminal Theme
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+/* Local monospace & system UI stacks used so offline environments never stall on external font @imports */
 
 :root {
   --atk-bg: #050204;

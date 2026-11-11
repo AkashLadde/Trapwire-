@@ -11,8 +11,8 @@ import time
 import subprocess
 import threading
 
-os.environ["COMPANY_URL"] = "http://127.0.0.1:8080"
-os.environ["TRAPWIRE_TARGET_PORTAL"] = "http://127.0.0.1:8080"
+# Preserve user-provided COMPANY_URL if set; otherwise app/attacker_server.py
+# derives the Defender URL dynamically from each incoming request hostname.
 
 
 def run_company_server():

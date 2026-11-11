@@ -4,78 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TRAPWIRE — OffSec Pentest Console &amp; Terminal HUD</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/css/attacker.css">
 </head>
 <body class="attacker-body">
-
-  <!-- AUDIO SOUND FX SYNTHESIZER TOGGLE -->
-  <audio id="sfxAudio" preload="auto"></audio>
-
-  <!-- KALI LINUX HACKER LOGIN & BOOT OVERLAY -->
-  <div class="kali-login-overlay {{ 'hidden' if not show_login else '' }}" id="kaliLoginOverlay">
-    <!-- Matrix Particle Canvas -->
-    <canvas id="kaliMatrixCanvas" class="kali-matrix-canvas"></canvas>
-
-    <div class="kali-login-card">
-      <!-- Glowing Red Spiderweb Emblem -->
-      <div class="kali-spiderweb-badge">
-        <img src="/static/img/spiderweb_terminal_bg.png" alt="Spiderweb HUD" class="emblem-img">
-        <div class="spider-glow-pulse"></div>
-      </div>
-
-      <div class="kali-login-title">
-        <span class="glitch-text" data-text="TRAPWIRE OFFSEC WORKSTATION">TRAPWIRE OFFSEC WORKSTATION</span>
-      </div>
-      <div class="kali-login-sub">Offensive Security Rolling Release • Kernel 6.8.0-kali • Deception Lab</div>
-
-      <!-- Boot Sequence Status Bar -->
-      <div class="kali-boot-progress-wrap" id="bootProgressWrap">
-        <div class="kali-boot-text" id="bootText">SYS_INIT: Initializing Cryptographic Shell &amp; Deception Probes...</div>
-        <div class="kali-boot-track">
-          <div class="kali-boot-fill" id="bootFill"></div>
-        </div>
-      </div>
-
-      <form class="kali-login-form" id="kaliLoginForm" onsubmit="handleKaliLogin(event)">
-        <div class="kali-form-group">
-          <label>Operator ID / Username <span>[UID 1000]</span></label>
-          <div class="input-glow-wrap">
-            <span class="input-prefix">root@kali:~#</span>
-            <input type="text" id="kaliUser" class="kali-input" value="root" autocomplete="username" required>
-          </div>
-        </div>
-        
-        <div class="kali-form-group">
-          <label>Passphrase <span>[DEFAULT: toor / kali]</span></label>
-          <div class="input-glow-wrap">
-            <span class="input-prefix">🔑</span>
-            <input type="password" id="kaliPass" class="kali-input" value="toor" autocomplete="current-password" placeholder="Enter passkey" required>
-          </div>
-        </div>
-
-        <button type="submit" class="kali-btn-submit" id="kaliLoginBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-          </svg>
-          AUTHENTICATE &amp; ENGAGE CONSOLE
-        </button>
-
-        <div class="kali-quick-actions">
-          <button type="button" class="kali-quick-login" onclick="quickKaliLogin('root', 'toor')">
-            ⚡ Quick Root (root / toor)
-          </button>
-          <button type="button" class="kali-quick-login" onclick="quickKaliLogin('kali', 'kali')">
-            🛡️ Kali User (kali / kali)
-          </button>
-        </div>
-      </form>
-
-      <div class="kali-login-foot">
-        <div class="dot-pulse-red"></div>
-        <span>Target Gateway: <b id="targetFootUrl">{{ target_api_base|default('http://127.0.0.1:8080') }}</b> (TrapWire Admin)</span>
-      </div>
-    </div>
-  </div>
 
   <!-- TOP BAR -->
   <header class="atk-topbar">
@@ -96,7 +28,7 @@
     <div class="atk-top-actions">
       <div class="atk-badge-group">
         <div class="atk-meta-pill" id="targetPill">
-          <span>TARGET: <b id="topTargetHost">127.0.0.1:8080</b></span>
+          <span>TARGET: <b id="topTargetHost">—</b></span>
         </div>
         <div class="atk-meta-pill">
           <span id="topVpnStatus">VPN: OFF</span>
@@ -127,7 +59,7 @@
         Reset Sandbox
       </button>
 
-      <a class="atk-btn-sm atk-btn-exit" id="companyServerLink" href="{{ target_api_base|default('http://127.0.0.1:8080') }}/">
+      <a class="atk-btn-sm atk-btn-exit" id="companyServerLink" href="{{ target_api_base|default('') }}/">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
           <polyline points="16 17 21 12 16 7"/>
@@ -351,7 +283,7 @@
         <div class="target-spec-list">
           <div class="target-spec-item">
             <span>Target Host:</span>
-            <b id="targetHostEl">127.0.0.1:8080 (TrapWire Admin)</b>
+            <b id="targetHostEl">—</b>
           </div>
           <div class="target-spec-item">
             <span>Target User:</span>
@@ -465,7 +397,7 @@
     <div class="atk-footer-left">
       <div class="footer-item">
         <div class="footer-dot dot-red"></div>
-        <span>TRAPWIRE OFFSEC PENTEST WORKSTATION (PORT 9000)</span>
+        <span id="workstationFootLabel">TRAPWIRE OFFSEC PENTEST WORKSTATION</span>
       </div>
       <div class="footer-item">
         <div class="footer-dot dot-green"></div>
@@ -474,7 +406,7 @@
     </div>
     <div class="atk-footer-right">
       <div class="footer-item">
-        <span>TARGET GATEWAY: <code id="footerTargetUrl">{{ target_api_base|default('http://127.0.0.1:8080') }}</code></span>
+        <span>TARGET GATEWAY: <code id="footerTargetUrl">{{ target_api_base|default('') }}</code></span>
       </div>
       <div class="footer-item">
         <span>HONEYPOT DECEPTION: <b style="color:var(--atk-cyan);">ACTIVE</b></span>
@@ -484,30 +416,36 @@
 
   <!-- Simulation Configuration -->
   <script>
-    window.TARGET_API_BASE = {{ target_api_base|tojson if target_api_base is defined else '"http://127.0.0.1:8080"' }};
+    window.TARGET_API_BASE = ({{ target_api_base|tojson if target_api_base is defined else '""' }} || "").replace(/\/+$/, "") || window.location.origin;
+    window.LOGIN_URL = {{ login_url|tojson if login_url is defined else '""' }};
     window.TARGET_USERNAME = {{ target_username|tojson if target_username is defined else '"admin"' }};
     window.WORDLIST = {{ wordlist|tojson if wordlist is defined else '["123456", "password", "admin123", "admin@123", "Welcome@123", "qwerty123", "Admin@2026!", "letmein123"]' }};
     window.VPN_NODES = {{ vpn_nodes|tojson if vpn_nodes is defined else '[]' }};
 
-    // Sound FX engine using Web Audio API
+    // Sound FX engine (strictly invoked on attack actions after user gesture)
     let audioCtx = null;
     let soundEnabled = true;
 
     function initAudio() {
-      if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) audioCtx = new AudioContext();
-      }
-      if (audioCtx && audioCtx.state === "suspended") {
-        audioCtx.resume();
-      }
+      try {
+        if (navigator.userActivation && !navigator.userActivation.hasBeenActive && !navigator.userActivation.isActive) {
+          return;
+        }
+        if (!audioCtx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) audioCtx = new AudioContext();
+        }
+        if (audioCtx && audioCtx.state === "suspended") {
+          audioCtx.resume().catch(() => {});
+        }
+      } catch (e) {}
     }
 
     function playTone(freq, type = "sine", duration = 0.08, gain = 0.1) {
       if (!soundEnabled) return;
       try {
         initAudio();
-        if (!audioCtx) return;
+        if (!audioCtx || audioCtx.state !== "running") return;
         const osc = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
         osc.type = type;
@@ -547,76 +485,35 @@
       const term = document.getElementById("terminalBody");
       if (!term) return;
       term.classList.toggle("no-wallpaper");
-      playBeepSound();
     }
-
-    // Matrix particle background in login screen
-    (function() {
-      const canvas = document.getElementById("kaliMatrixCanvas");
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      let w = canvas.width = window.innerWidth;
-      let h = canvas.height = window.innerHeight;
-      const cols = Math.floor(w / 20) + 1;
-      const ypos = Array(cols).fill(0);
-
-      window.addEventListener("resize", () => {
-        w = canvas.width = window.innerWidth;
-        h = canvas.height = window.innerHeight;
-      });
-
-      const chars = "TRAPWIRE010101KALIEXPLOITROOTBREACHDECEPTION2026";
-      function matrixStep() {
-        ctx.fillStyle = "rgba(4, 8, 16, 0.15)";
-        ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = "#EF4444";
-        ctx.font = "12pt JetBrains Mono, monospace";
-
-        ypos.forEach((y, ind) => {
-          const text = chars.charAt(Math.floor(Math.random() * chars.length));
-          const x = ind * 20;
-          ctx.fillText(text, x, y);
-          if (y > 100 + Math.random() * 10000) ypos[ind] = 0;
-          else ypos[ind] = y + 20;
-        });
-      }
-      setInterval(matrixStep, 50);
-    })();
-
-    // Boot progress animation
-    let bootProgress = 0;
-    const bootTexts = [
-      "SYS_INIT: Initializing Cryptographic Shell & Deception Probes...",
-      "MODULE_LOAD: Loading Metasploit, Nmap, Deception Engines...",
-      "NET_SOCKET: Probing Target 127.0.0.1:8080 Authentication Gateway...",
-      "READY: Offensive Security Workstation Armed."
-    ];
-
-    const bootInterval = setInterval(() => {
-      bootProgress += 25;
-      const fill = document.getElementById("bootFill");
-      const text = document.getElementById("bootText");
-      if (fill) fill.style.width = bootProgress + "%";
-      if (text && bootTexts[Math.floor(bootProgress / 25) - 1]) {
-        text.textContent = bootTexts[Math.floor(bootProgress / 25) - 1];
-      }
-      if (bootProgress >= 100) {
-        clearInterval(bootInterval);
-      }
-    }, 400);
 
     function resolveTargetBase() {
-      if (window.location.port === "9000") {
-        return `${window.location.protocol}//${window.location.hostname}:8080`;
-      }
-      return window.TARGET_API_BASE || window.location.origin;
+      return (window.TARGET_API_BASE && String(window.TARGET_API_BASE).replace(/\/+$/, "")) || window.location.origin;
+    }
+    window.resolveTargetBase = resolveTargetBase;
+
+    function resolveLoginUrl() {
+      if (window.LOGIN_URL) return window.LOGIN_URL;
+      const p = window.location.pathname.replace(/\/+$/, "");
+      if (p.endsWith("/console")) return p.slice(0, -"/console".length) + "/login";
+      if (p.endsWith("/attacker")) return p + "/login";
+      return "/login";
     }
 
-    (function syncCompanyLink() {
+    (function syncTargetLabels() {
+      const base = resolveTargetBase();
+      let hostLabel = window.location.host;
+      try { hostLabel = new URL(base).host; } catch (e) {}
       const link = document.getElementById("companyServerLink");
-      if (link) link.href = resolveTargetBase() + "/";
+      if (link) link.href = base + "/";
       const fUrl = document.getElementById("footerTargetUrl");
-      if (fUrl) fUrl.textContent = resolveTargetBase();
+      if (fUrl) fUrl.textContent = base;
+      const topHost = document.getElementById("topTargetHost");
+      if (topHost) topHost.textContent = hostLabel;
+      const targetEl = document.getElementById("targetHostEl");
+      if (targetEl) targetEl.textContent = `${hostLabel} (TrapWire Admin)`;
+      const wsFoot = document.getElementById("workstationFootLabel");
+      if (wsFoot) wsFoot.textContent = `TRAPWIRE OFFSEC WORKSTATION (${window.location.host})`;
     })();
 
     // Notify Company Server of Attacker Event with Forensic Metadata
@@ -624,7 +521,7 @@
       const base = resolveTargetBase();
       const user = typeof meta === "string" ? meta : (meta.user || sessionStorage.getItem("kali_user") || "root");
       const ip = (window.AttackerState && window.AttackerState.vpnConnected && window.AttackerState.apparentIp) || meta.ip || "";
-      
+
       const payloadData = typeof meta === "object" ? {
         event: eventType,
         user: user,
@@ -646,6 +543,7 @@
         await fetch(`${base}/api/attacker-session-event`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify(payloadData)
         });
       } catch (e) {
@@ -654,90 +552,26 @@
     }
     window.notifyCompanyServer = notifyCompanyServer;
 
-    function handleKaliLogin(e) {
-      if (e) e.preventDefault();
-      initAudio();
-
-      const user = (document.getElementById("kaliUser").value || "root").trim();
-      const pass = (document.getElementById("kaliPass").value || "").trim();
-      const overlay = document.getElementById("kaliLoginOverlay");
-      const bootText = document.getElementById("bootText");
-
-      // Valid credentials: root/toor, kali/kali, admin/Admin@2026!
-      const validCreds = (user === "root" && (pass === "toor" || pass === "root")) ||
-                         (user === "kali" && (pass === "kali" || pass === "toor")) ||
-                         (user === "admin" && (pass === "Admin@2026!" || pass === "admin123" || pass === "toor")) ||
-                         (pass === "toor" || pass === "kali");
-
-      if (!validCreds) {
-        playAlarmSound();
-        if (bootText) {
-          bootText.innerHTML = `<span style="color:#EF4444;font-weight:700;">⛔ AUTHENTICATION FAILED: Invalid passphrase for '${user}'</span>`;
-        }
-        // Notify company server of failed login attempt
-        notifyCompanyServer("terminal_login_attempt", { 
-          user: user, 
-          password_attempt: pass || "[empty]",
-          tool: "Kali Workstation Login HUD"
-        });
-        return;
-      }
-
-      playSuccessSound();
-      if (overlay) overlay.classList.add("hidden");
-      sessionStorage.setItem("kali_authenticated", "true");
-      sessionStorage.setItem("kali_user", user);
-
-      // Notify company server of successful hacker login
-      notifyCompanyServer("terminal_login_success", { 
-        user: user, 
-        password_attempt: pass,
-        tool: "Kali OffSec Workstation"
-      });
-
-      setTimeout(() => {
-        document.getElementById("termInput")?.focus();
-      }, 300);
-    }
-
-    function quickKaliLogin(u, p) {
-      document.getElementById("kaliUser").value = u;
-      document.getElementById("kaliPass").value = p;
-      handleKaliLogin();
-    }
-
     function lockKaliConsole() {
-      playBeepSound();
       sessionStorage.removeItem("kali_authenticated");
-      if (window.location.port === "9000") {
-        window.location.href = "/login";
-      } else {
-        window.location.href = "/attacker/login";
-      }
+      window.location.href = resolveLoginUrl();
     }
 
     function handleReset() {
-      playAlarmSound();
       if (window.confirm("Reset all threat alerts, incident records, and security audit sessions?")) {
         const base = resolveTargetBase();
-        fetch(`${base}/api/reset-demo`).then(() => {
-          window.location.reload();
-        }).catch(() => {
+        Promise.allSettled([
+          fetch(`${base}/api/reset-demo`),
+          fetch(`${base}/lab/reset`, { method: "POST" }),
+        ]).then(() => {
           window.location.reload();
         });
       }
     }
 
-    // Check session unlock status on load
-    if (sessionStorage.getItem("kali_authenticated") === "true") {
-      document.getElementById("kaliLoginOverlay")?.classList.add("hidden");
-    }
-
-    // Keyboard sound on typing
-    document.addEventListener("keydown", (e) => {
-      if (e.target.tagName === "INPUT") {
-        playKeyClickSound();
-      }
+    // Focus terminal input cleanly on load
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("termInput")?.focus();
     });
   </script>
   <script src="/static/js/attacker_terminal.js?v={{ range(1000, 99999)|random }}"></script>

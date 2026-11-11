@@ -1,18 +1,15 @@
 /**
  * TRAPWIRE — Attacker Workstation Command Interpreter & Offensive Audit Engine
  * Kali Linux / Offensive Pentest Console Experience
- * Targets Defender Server at http://127.0.0.1:8080
  */
 
 (function () {
   "use strict";
 
-  const API_BASE = (function () {
-    if (window.location.port === "9000") {
-      return `${window.location.protocol}//${window.location.hostname}:8080`;
-    }
-    return window.TARGET_API_BASE || window.location.origin;
-  })();
+  const API_BASE = (
+    (window.TARGET_API_BASE && String(window.TARGET_API_BASE).replace(/\/+$/, "")) ||
+    window.location.origin
+  );
 
   // --- Virtual Filesystem Model ---
   const VIRTUAL_FS = {
@@ -32,7 +29,7 @@
 ╚══════════════════════════════════════════════════════════════════════╝
 
 Record Set Preview:
-  Run `show records` to query live records via GET /api/orders.
+  Run 'show records' to query live records via GET /api/orders.
 [!] Sensitive fields (Aadhaar/PAN/Card) are hashed in /api/export (salted SHA-256) and never exposed raw.`
       },
       "client_records.enc": {
@@ -74,7 +71,7 @@ http://zerodaybroker998237492837492834.onion/exploits`
 # Penetration Testing Suite for DPDP Compliance Verification
 # ==========================================================
 echo "[+] Initializing penetration testing agent..."
-echo "[+] Target environment: Production Target Gateway (127.0.0.1:8080)"
+echo "[+] Target environment: ${API_BASE}"
 echo "[+] Mode: Intrusion Detection & DPDP Compliance Verification"`
       },
       "ransom_notes.txt": {
@@ -192,7 +189,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
   // Initialize Welcome Banner
   function printWelcomeBanner() {
     printLine("┌────────────────────────────────────────────────────────────────────────┐", "cyan");
-    printLine("│  OFFENSIVE SECURITY PENTEST WORKSTATION — TRAPWIRE 2026.4 (PORT 9000)  │", "error");
+    printLine("│  OFFENSIVE SECURITY PENTEST WORKSTATION — TRAPWIRE 2026.4              │", "error");
     printLine("│  Autonomous Exploit Lab, Vulnerability Assessment & Deception Research │", "dim");
     printLine("└────────────────────────────────────────────────────────────────────────┘", "cyan");
     printLine("Target Company Host: <b style='color:#00e5ff;'>" + API_BASE + "</b> (Admin Security Center)", "info");
@@ -395,10 +392,17 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine("<span class='term-tag tag-scan'>[SCAN]</span> Sending SYN probes to top service ports...", "dim");
       await sleep(350);
 
+      const defenderPort = (function () {
+        try { return new URL(API_BASE).port || (API_BASE.startsWith("https") ? "443" : "80"); }
+        catch (e) { return "8080"; }
+      })();
+      const attackerPort = window.location.port || (window.location.protocol === "https:" ? "443" : "80");
+
       printLine("PORT     STATE SERVICE      REASON", "cyan");
-      printLine("80/tcp   open  http         uvicorn / FastAPI (Company Server)", "success");
-      printLine("8080/tcp open  http-alt     TRAPWIRE Application Server", "success");
-      printLine("9000/tcp open  http-alt     Kali Linux Pentest Console", "error");
+      printLine(`${defenderPort}/tcp open  http-alt     TRAPWIRE Defender Application Server`, "success");
+      if (attackerPort !== defenderPort) {
+        printLine(`${attackerPort}/tcp open  http-alt     TRAPWIRE Attacker Pentest Console`, "error");
+      }
       printLine("443/tcp  filt  https        cloud-waf-active", "dim");
       printLine("");
 
@@ -497,8 +501,16 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       await COMMANDS.auth();
     },
 
-    bruteforce: async () => {
-      const username = state.targetUser;
+    bruteforce: async (args = []) => {
+      let username = state.targetUser || "admin";
+      for (let i = 0; i < args.length; i++) {
+        if ((args[i] === "--user" || args[i] === "-u") && args[i + 1]) {
+          username = args[i + 1].trim();
+          i++;
+        } else if (args[i].startsWith("--user=")) {
+          username = args[i].slice("--user=".length).trim() || username;
+        }
+      }
       if (typeof window.playAlarmSound === "function") window.playAlarmSound();
 
       printLine("<span class='term-tag tag-error'>[BRUTEFORCE]</span> Initializing automated credential attack module...", "error");
@@ -509,7 +521,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
 
       // Notify company server of bruteforce event
       if (typeof window.notifyCompanyServer === "function") {
-        window.notifyCompanyServer("bruteforce_start");
+        window.notifyCompanyServer("bruteforce_start", { user: username });
       }
 
       const decoyPool = ["dragon123", "shadow2024", "monkey99", "qwerty88", "football7", "batman123"];
@@ -623,7 +635,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       await sleep(200);
 
       // Delegate to the real (local, self-contained) brute-force engine.
-      await COMMANDS.bruteforce();
+      await COMMANDS.bruteforce(["--user", login]);
     },
 
     sqli: async (args) => {
@@ -733,7 +745,13 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       // PHASE 2 (REAL): asks the lab server to fetch a URL server-side.
       // Only the internal decoy metadata endpoint is allow-listed; real
       // cloud metadata addresses are blocked and logged.
-      const target = args[0] || `${API_BASE}/lab/internal/metadata`;
+      let defaultTarget = `${API_BASE}/lab/internal/metadata`;
+      try {
+        const u = new URL(API_BASE);
+        const portPart = u.port ? `:${u.port}` : "";
+        defaultTarget = `http://127.0.0.1${portPart}/lab/internal/metadata`;
+      } catch (e) {}
+      const target = args[0] || defaultTarget;
       const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       if (typeof window.playBeepSound === "function") window.playBeepSound();
       printLine("<span class='term-tag tag-warn'>[SSRF]</span> Asking the server to fetch a URL on our behalf...", "warning");

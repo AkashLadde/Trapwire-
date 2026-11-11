@@ -179,6 +179,38 @@ check(
     r_p_add.status_code == 200 and bool(pid) and any(p["id"] == pid for p in r_p_list) and r_p_del.status_code == 200 and r_p_del2.status_code == 404,
 )
 
+# Attacker portal login/console route checks (single-server + standalone TestClient)
+r_atk_login = requests.get(f"{BASE}/attacker/login", headers={"Host": "192.168.1.50:8080"})
+r_atk_console = requests.get(f"{BASE}/attacker/console", headers={"Host": "192.168.1.50:8080"})
+r_atk_root = requests.get(f"{BASE}/attacker", headers={"Host": "192.168.1.50:8080"})
+r_atk_js = requests.get(f"{BASE}/static/js/attacker_terminal.js")
+check(
+    "A16 single-server attacker routes & dynamic LAN base",
+    r_atk_login.status_code == 200
+    and "http://192.168.1.50:8080" in r_atk_login.text
+    and 'window.location.port === "9000"' not in r_atk_login.text
+    and r_atk_console.status_code == 200
+    and r_atk_root.status_code == 200
+    and "kaliLoginOverlay" not in r_atk_console.text
+    and 'id="termInput"' in r_atk_console.text
+    and r_atk_js.status_code == 200
+    and "Run 'show records'" in r_atk_js.text,
+)
+
+from app.attacker_server import app as _atk_standalone_app
+_stc = TestClient(_atk_standalone_app)
+r_st_login = _stc.get("/", headers={"host": "10.0.0.5:9000"})
+r_st_console = _stc.get("/console", headers={"host": "10.0.0.5:9000"})
+check(
+    "A17 standalone attacker server routes & dynamic host base",
+    r_st_login.status_code == 200
+    and "http://10.0.0.5:8080" in r_st_login.text
+    and r_st_console.status_code == 200
+    and "http://10.0.0.5:8080" in r_st_console.text
+    and "kaliLoginOverlay" not in r_st_console.text
+    and 'id="termInput"' in r_st_console.text,
+)
+
 # Clean up test alerts
 requests.get(f"{BASE}/api/reset-demo")
 requests.post(f"{BASE}/lab/reset")

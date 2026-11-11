@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TRAPWIRE — OffSec Pentest Operator Login</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/css/attacker.css">
   <style>
     /* ==========================================================================
@@ -507,7 +508,7 @@
 
       <div class="atk-target-banner">
         <span class="pulse-dot-red"></span>
-        <span>Target Gateway: <b id="targetGatewayText">{{ target_api_base|default('http://127.0.0.1:8080') }}</b></span>
+        <span>Target Gateway: <b id="targetGatewayText">{{ target_api_base|default('') }}</b></span>
       </div>
     </div>
 
@@ -588,7 +589,7 @@
 
       <div class="atk-footer-links">
         <span>Sandboxed OffSec Environment</span>
-        <a href="http://127.0.0.1:8080/" target="_blank" id="socDefenderLink">Switch to Admin Gateway &rarr;</a>
+        <a href="{{ target_api_base|default('') }}/" target="_blank" id="socDefenderLink">Switch to Admin Gateway &rarr;</a>
       </div>
 
     </div>
@@ -596,9 +597,16 @@
   </div>
 
   <script>
-    const TARGET_API_BASE = (window.location.port === "9000")
-      ? `${window.location.protocol}//${window.location.hostname}:8080`
-      : "{{ target_api_base|default('http://127.0.0.1:8080') }}";
+    const SERVER_TARGET_API_BASE = {{ target_api_base|tojson if target_api_base is defined else '""' }};
+    const SERVER_CONSOLE_URL = {{ console_url|tojson if console_url is defined else '""' }};
+    const TARGET_API_BASE = (SERVER_TARGET_API_BASE && String(SERVER_TARGET_API_BASE).replace(/\/+$/, "")) || window.location.origin;
+
+    function resolveConsoleUrl() {
+      if (SERVER_CONSOLE_URL) return SERVER_CONSOLE_URL;
+      const p = window.location.pathname.replace(/\/+$/, "");
+      if (p.endsWith("/login")) return p.slice(0, -"/login".length) + "/console";
+      return (p === "" ? "" : p) + "/console";
+    }
 
     // Matrix Background Rain Canvas Effect
     (function initMatrix() {
@@ -615,8 +623,8 @@
 
       const chars = "0101010101010101ABCDEF0123456789!@#$%^&*()_+-=[]{}|;:,.<>?~";
       const fontSize = 13;
-      let columns = Math.floor(canvas.width / fontSize);
-      let drops = Array(columns).fill(1);
+      const columns = Math.max(1, Math.floor(canvas.width / fontSize));
+      const drops = Array(columns).fill(1);
 
       function draw() {
         ctx.fillStyle = "rgba(5, 2, 4, 0.08)";
@@ -639,37 +647,6 @@
       setInterval(draw, 45);
     })();
 
-    // Web Audio Synthesizer for High-Tech Sound FX
-    function playBeep(freq = 440, type = "sine", duration = 0.1) {
-      try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = type;
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + duration);
-      } catch (e) {}
-    }
-
-    function playSuccessSound() {
-      playBeep(587.33, "triangle", 0.08);
-      setTimeout(() => playBeep(880, "triangle", 0.15), 90);
-    }
-
-    function playAlarmSound() {
-      playBeep(220, "sawtooth", 0.15);
-      setTimeout(() => playBeep(180, "sawtooth", 0.2), 160);
-    }
-
-    function playKeyClickSound() {
-      playBeep(800 + Math.random() * 400, "square", 0.02);
-    }
-
     // Toggle Password Visibility
     function togglePasswordVisibility() {
       const passInput = document.getElementById("opPassword");
@@ -680,22 +657,21 @@
       }
     }
 
-    // Fill Quick Credentials
+    // Fill Quick Credentials (silent UI action)
     function fillCreds(u, p) {
-      playKeyClickSound();
       document.getElementById("opUsername").value = u;
       document.getElementById("opPassword").value = p;
       const banner = document.getElementById("errorBanner");
       banner.style.display = "none";
     }
 
-    // Notify Company SOC Server via API Event
+    // Notify Company SOC telemetry feed (hardware stays silent on login events)
     async function notifyCompanyServer(event_name, data = {}) {
       try {
-        const base = TARGET_API_BASE;
-        await fetch(`${base}/api/attacker-session-event`, {
+        await fetch(`${TARGET_API_BASE}/api/attacker-session-event`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             event: event_name,
             ...data
@@ -706,7 +682,7 @@
       }
     }
 
-    // Handle Operator Login
+    // Handle Operator Login (silent — no browser alarm/audio or ESP32 buzzer/LED on login)
     async function handleOperatorLogin(e) {
       e.preventDefault();
       const user = (document.getElementById("opUsername").value || "root").trim();
@@ -724,24 +700,21 @@
       btn.disabled = true;
       btnText.textContent = "Authenticating...";
 
-      // Validation check: root/toor, kali/kali, admin/Admin@2026!, etc.
       const validCreds = (user === "root" && (pass === "toor" || pass === "root")) ||
                          (user === "kali" && (pass === "kali" || pass === "toor")) ||
                          (user === "admin" && (pass === "Admin@2026!" || pass === "admin123" || pass === "toor")) ||
                          (pass === "toor" || pass === "kali");
 
       if (!validCreds) {
-        playAlarmSound();
         bootBar.style.width = "100%";
         bootBar.style.background = "#EF4444";
         bootText.innerHTML = `<span style="color:#EF4444;font-weight:700;">⛔ AUTHENTICATION REJECTED: Invalid passphrase for '${user}'</span>`;
-        errorMsg.textContent = `Access denied for '${user}'. Intrusion telemetry dispatched to Company SOC.`;
+        errorMsg.textContent = `Access denied for '${user}'. Attempt logged to Company SOC.`;
         banner.style.display = "flex";
 
         btn.disabled = false;
         btnText.textContent = "Authenticate & Engage Console";
 
-        // Notify Defender SOC of unauthorized attempt
         notifyCompanyServer("terminal_login_attempt", {
           user: user,
           password_attempt: pass || "[empty]",
@@ -750,8 +723,6 @@
         return;
       }
 
-      // Successful Authentication
-      playSuccessSound();
       bootBar.style.width = "100%";
       bootBar.style.background = "linear-gradient(90deg, #10B981, #00E5FF)";
       bootText.innerHTML = `<span style="color:#10B981;font-weight:700;">✓ OPERATOR AUTHENTICATED: Launching TRAPWIRE Offensive Console...</span>`;
@@ -760,7 +731,6 @@
       sessionStorage.setItem("kali_authenticated", "true");
       sessionStorage.setItem("kali_user", user);
 
-      // Notify Defender SOC of active attacker session
       await notifyCompanyServer("terminal_login_success", {
         user: user,
         password_attempt: pass,
@@ -768,29 +738,16 @@
       });
 
       setTimeout(() => {
-        // Redirect to Attacker Console
-        if (window.location.port === "9000") {
-          window.location.href = "/console";
-        } else {
-          window.location.href = "/attacker/console";
-        }
-      }, 700);
+        window.location.href = resolveConsoleUrl();
+      }, 250);
     }
 
-    // Typing SFX on inputs
-    document.addEventListener("keydown", (e) => {
-      if (e.target.tagName === "INPUT") {
-        playKeyClickSound();
-      }
-    });
-
-    // Adapt link if on LAN / dynamic host
+    // Bind dynamic Admin Gateway URL and Target label at runtime
     (function adaptLinks() {
-      const host = window.location.hostname || "127.0.0.1";
       const socLink = document.getElementById("socDefenderLink");
-      if (socLink && host !== "127.0.0.1") {
-        socLink.href = `http://${host}:8080/`;
-      }
+      if (socLink) socLink.href = `${TARGET_API_BASE}/`;
+      const gwText = document.getElementById("targetGatewayText");
+      if (gwText) gwText.textContent = TARGET_API_BASE;
     })();
   </script>
 </body>
