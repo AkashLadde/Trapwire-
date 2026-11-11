@@ -1,5 +1,15 @@
 # TRAPWIRE — Comprehensive Hardware Integration & Setup Guide
 
+> **Start here → [`README.md`](README.md).** Since firmware v1.0 the ESP32 bridge
+> is **built into the server** (`app/hardware.py`): plug the board in by USB, start
+> TRAPWIRE, and the red LED + buzzer + OLED fire automatically — no second process,
+> no ArduinoJson library. The wire protocol is now one pipe-delimited line per alert
+> (`ALERT|sev|type|ip|isp|location|incident|time|count|ack|detail`). The standalone
+> `serial_bridge.py` relay is now **optional** (only when the board is on a different
+> machine than the server) and speaks that same protocol. The JSON-era sketches have
+> moved to [`legacy/`](legacy/). The architecture notes below remain valid background
+> for your report; just use the pipe protocol and the current sketch folders.
+
 This guide details how to integrate **physical IoT and embedded hardware** with the **TrapWire Cyber Defense System**. Adding physical hardware elevates the capstone demonstration into a true hybrid **Cyber-Physical Intrusion Detection & Response (CP-IDS)** appliance.
 
 ---
@@ -96,14 +106,10 @@ If your buzzer produces a continuous sound immediately upon powering on:
      #define BUZZER_ACTIVE_LOW  true
      ```
    - Re-upload the sketch to your ESP32.
-2. **Active vs. Passive Buzzer Modes**:
-   - **Passive Buzzer** (exposed green PCB backing): Requires an AC frequency signal to generate tone. Driven by `tone(PIN_BUZZER, freq)` at alternating 960Hz / 650Hz.
-   - **Active Buzzer** (has a sticker on top and sealed epoxy bottom): Has its own internal 2.4kHz oscillator. Driven by rapid DC pulse cadence.
-   - **Runtime Toggle:** In the Arduino Serial Monitor (115200 baud), you can simply type:
-     - `passive` $\rightarrow$ switches to Passive Buzzer mode (dual-tone police siren wail)
-     - `active` $\rightarrow$ switches to Active Buzzer mode (tactical pulsing siren)
-     - `test` $\rightarrow$ fires an instant 9-second hardware alarm test!
-   - You can also change the default in the sketch (`bool isBuzzerActive = false;` or `true`).
+2. **Active vs. Passive Buzzer**:
+   - **Active Buzzer** (has a sticker on top and sealed epoxy bottom): Generates its own tone when DC voltage is applied. Driven by `digitalWrite()`.
+   - **Passive Buzzer** (exposed green PCB backing): Requires an AC frequency signal to generate tone. Driven by `tone(PIN_BUZZER, freq)`.
+   - The updated firmware automatically handles **both** passive and active buzzers by simultaneously pulsing `tone()` frequency and driving the digital GPIO level!
 3. **3-Pin Buzzer Modules**:
    - If using a 3-pin module labeled `S`, `+`, `-`:
      - `S` (Signal) $\rightarrow$ ESP32 `D23`
@@ -203,34 +209,25 @@ If you have a **NodeMCU ESP8266** with discrete **White LED**, **Red LED**, **0.
 6. Click **Upload** (➡️ arrow icon).
    - *Pro Tip*: If Arduino IDE shows `Connecting........_____.....`, press and hold the **BOOT** button on the ESP32 for 1-2 seconds until the percentage counter appears, then release it.
 7. Once uploaded:
-   - **Self-Test Routine**: ESP32 plays a 3-tone power-on chime (`880Hz -> 1175Hz -> 1760Hz`), blinks the White LED and Red LED, and initializes the dynamic display.
-   - **Standby Mode (Normal)**:
-     - The **White LED** will **blink rhythmically** (500ms ON / 500ms OFF) to indicate system armed.
+   - **Self-Test Routine**: White LED blinks twice, Red LED blinks twice, and buzzer gives a brief 300ms chirp.
+   - **Standby Mode**:
+     - The **White LED** will **blink rhythmically** (500ms ON / 500ms OFF) to indicate the system is armed.
      - The **Red LED** is **strictly OFF**.
-     - The **Buzzer** is **completely SILENT**.
-     - The **0.96" OLED** renders a **Dynamic Animated HUD**:
-       - Animated rotating radar sweep indicator `[/]` `[-]` `[\]` `[|]` in the header bar.
-       - Pulsing `[*] ARMED` indicator synchronized with the White LED.
-       - Live ticking UPTIME counter (`UP: HH:MM:SS`) updating in real-time.
-       - Smooth horizontal scrolling security marquee at the bottom.
-       - Guaranteed zero text overlap with strict row coordinate separation.
-   - **Attack Mode (Intrusion Detected or Tested)**:
-     - The **White LED** turns OFF immediately.
-     - The **Red LED** blinks in an **emergency tactical strobe** (120ms ON / 120ms OFF).
+     - The **Buzzer** is **strictly SILENT**.
+     - The **OLED** displays `TRAPWIRE DEFENDER - STATUS: ARMED & READY`.
+   - **Attack Mode** (when an attack hits or when testing):
+     - The **White LED** turns OFF.
+     - The **Red LED** blinks in an **emergency strobe** (120ms ON / 120ms OFF).
      - The **Buzzer** sounds an authentic **Police Siren** (alternating 960Hz / 650Hz dual-tone wail).
-     - The **OLED** renders a high-alert breach screen:
-       - Alternating flashing emergency banner (`! CRITICAL BREACH !`).
-       - Attacker source IP and exploit vector.
-       - Real-time animated lockdown progress bar counting down from 9s to 0s.
-       - Flashing perimeter threat border.
-     - Automatically resets back to Standby after 9 seconds of inactivity.
+     - The **OLED** displays `! CRITICAL BREACH !` with attacker IP and exploit vector.
+     - Automatically resets back to Standby after 9 seconds.
 
 ### Quick Testing in Arduino IDE (Serial Monitor)
-You can test the siren, dynamic OLED, and LEDs directly inside the Arduino IDE without running the server:
+You can test the siren, OLED, and LEDs directly inside the Arduino IDE without even running the server:
 1. In Arduino IDE, click *Tools > Serial Monitor* and set the baud rate to **115200** (with *Newline* or *Both NL & CR*).
 2. Type `attack` or `test` or `siren` and press **Enter**:
-   - The ESP32 immediately turns OFF the white LED, strobes the red LED, wails the police siren, flashes the breach banner, and animates the 9-second lockdown progress bar on the OLED!
-3. Type `reset` or `standby` to return immediately to Standby mode (white LED blinking, dynamic radar/marquee, buzzer silent).
+   - The ESP32 immediately turns OFF the white LED, begins strobing the red LED, sounds the police siren, and renders the incident screen on the OLED for 9 seconds!
+3. Type `reset` or `standby` to return immediately to Standby mode (white LED blinking, buzzer silent).
 
 ### Option 2: Uploading to NodeMCU (ESP8266)
 1. Open the [Arduino IDE](https://www.arduino.cc/en/software).

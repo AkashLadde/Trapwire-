@@ -4,19 +4,62 @@ Educational cybersecurity capstone demo. Everything runs locally — the
 "attacker" side only ever talks to this same local server; nothing here
 touches the real internet or any real system.
 
-## Setup
+## Setup & Optional Sample Data
 
-```
+```bash
 pip install -r requirements.txt
+cp .env.example .env
+```
+
+The `orders`, `users`, and `projects` tables start clean in MySQL (or SQLite fallback).
+Add records directly from the Company Admin Dashboard or load optional **clearly labelled synthetic demo rows** for testing:
+
+```bash
+python seed_sample_data.py           # seeds synthetic demo orders/users/projects
+python seed_sample_data.py --clear   # clears synthetic demo data
 ```
 
 ## Run
 
 ```
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8080
 ```
 
-Open http://127.0.0.1:8000/
+Open http://127.0.0.1:8080/
+
+(Or run **both** portals at once on their own ports with `python run_servers.py`
+— Company/Defender on 8080, standalone Attacker console on 9000.)
+
+## Database (MySQL)
+
+TRAPWIRE uses **MySQL** and auto-creates the `trapwire_db` database on first run;
+if MySQL is unreachable it falls back to a local SQLite file so the demo still runs.
+Make sure the `pymysql` driver is installed (it's in `requirements.txt`) and MySQL
+is running, then set the connection via env vars (see `.env.example`):
+
+```bash
+export MYSQL_HOST=localhost MYSQL_USER=trapwire MYSQL_PASSWORD=strongpass MYSQL_DATABASE=trapwire_db
+uvicorn app.main:app --port 8080
+```
+
+On startup the log must show `Connected to MySQL Server ...`. If it says
+`Falling back to persistent SQLite Engine`, MySQL isn't reachable or the driver
+isn't installed. Or bring up MySQL **and** the app together with one command:
+
+```bash
+docker compose up --build        # MySQL + app, then open http://127.0.0.1:8080/
+```
+
+## Physical alert node (red LED + buzzer + OLED)
+
+Optional ESP32 hardware: when any attack is detected, a **red LED** flashes, a
+**buzzer** sounds, and a **0.96" OLED** shows the attacker's details (type, IP,
+ISP, location, incident ID, DPB ack). It hooks into the same alert pipeline as
+the dashboard, so it needs no extra wiring in software. With no board attached,
+the dashboard's **Hardware Nodes & IoT** tab shows a live "virtual OLED" mirror
+of exactly what the hardware would display. Full build + flashing guide:
+[`hardware/README.md`](hardware/README.md). Quick bench test:
+`python -m app.hardware --test`.
 
 ## How to demo it
 
@@ -28,16 +71,16 @@ Open http://127.0.0.1:8000/
      the session as suspicious server-side).
    - Click "Open Company Dashboard" once cracked.
 2. On the dashboard (as the attacker), click "Export Customer Data".
-   - The dashboard *view* still shows realistic-looking masked data (so the
-     deception holds up while the attacker is deciding what to do). But the
-     actual exported file is different: every sensitive field (Aadhaar,
-     PAN, phone, email, card) is replaced with its SHA-256 hash before
-     export — so even the downloaded file contains no usable personal
-     data, hashed on top of already being synthetic. The moment this
-     download happens, TRAPWIRE captures the real connecting IP/ISP,
-     automatically generates a PRELIMINARY breach report, and submits it
-     to the built-in Data Protection Board portal (see below) — which
-     issues an acknowledgement number back.
+   - The dashboard *view* shows masked data under **DPDP Act, 2023** guidelines.
+     When `/api/export` is triggered by a flagged/attacker session, every
+     sensitive field (`customer_name`, `phone`, `email`, `aadhaar`, `pan`,
+     `card_last4`, `address`) is replaced with its **one-way salted SHA-256
+     hash** before export (`app/data.py`) — never plaintext PII. If the
+     `orders` table is empty, `/api/export` returns `[]` with an
+     `X-Canary-Tracking-Url` header. The moment a download happens, TRAPWIRE
+     captures the real connecting IP/ISP, automatically generates a PRELIMINARY
+     breach report, and submits it to the built-in Data Protection Board portal
+     (see below) — which issues an acknowledgement number back.
    - "Opening" the downloaded file loads a small tracking page in the
      attacker's own browser tab (the canary token). That page runs ordinary
      JavaScript — the same category as any analytics script on any normal
@@ -69,13 +112,14 @@ Open http://127.0.0.1:8000/
   teams, no malware involved), live alerting via WebSocket, automated PDF
   compliance report generation, and a working (simulated) Data Protection
   Board portal that receives, stores, and acknowledges every submission.
-- Simulated for the demo: the "VPN" is a cosmetic label; the DPB portal is
-  clearly marked as an educational simulation and is not a real government
-  system (no official emblem is used, and every page carries a visible
-  disclaimer banner); the geolocation lookup falls back to a labeled
-  simulated result if there's no internet access to ip-api.com; there's no
-  real network packet capture (that's listed as future work in your own
-  P1 slide).
+- Simulated for the demo: the "VPN" in the attacker console uses RFC 5737
+  `TEST-NET` addresses as cosmetic labels; the DPB portal is clearly marked as
+  an educational simulation and is not a real government system (no official
+  emblem is used, and every page carries a visible disclaimer banner); offline
+  geolocation returns an explicit `"Localhost / Offline Network"` or
+  `"Unresolved External IP (Offline)"` indicator rather than fabricated ISPs;
+  and only the live ESP32 node state (`app/hardware.py`) is reported on
+  `/api/hardware/status`.
 - Deliberately NOT included: no actual malware/virus payload, and no
   generic credential-cracking tool aimed at third-party systems — the
   brute-force here only ever targets this app's own demo login endpoint,
@@ -83,8 +127,3 @@ Open http://127.0.0.1:8000/
   browser tab, not code that runs on or infects the attacker's system.
   This keeps the project in "legitimate security research / defensive
   simulation" territory instead of building actual attack tooling.
-
-## Fix before your final submission
-
-Your P1 slide says "DPDP Act, 2013" — the correct name is the
-Digital Personal Data Protection (DPDP) Act, 2023.

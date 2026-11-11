@@ -127,7 +127,7 @@
         Reset Sandbox
       </button>
 
-      <a class="atk-btn-sm atk-btn-exit" href="http://127.0.0.1:8080/">
+      <a class="atk-btn-sm atk-btn-exit" id="companyServerLink" href="{{ target_api_base|default('http://127.0.0.1:8080') }}/">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
           <polyline points="16 17 21 12 16 7"/>
@@ -474,7 +474,7 @@
     </div>
     <div class="atk-footer-right">
       <div class="footer-item">
-        <span>TARGET GATEWAY: <code>http://127.0.0.1:8080</code></span>
+        <span>TARGET GATEWAY: <code id="footerTargetUrl">{{ target_api_base|default('http://127.0.0.1:8080') }}</code></span>
       </div>
       <div class="footer-item">
         <span>HONEYPOT DECEPTION: <b style="color:var(--atk-cyan);">ACTIVE</b></span>
@@ -605,12 +605,25 @@
       }
     }, 400);
 
-    // Notify Company Server of Attacker Event
-    // Notify Company Server of Attacker Event with Rich Forensic Metadata
+    function resolveTargetBase() {
+      if (window.location.port === "9000") {
+        return `${window.location.protocol}//${window.location.hostname}:8080`;
+      }
+      return window.TARGET_API_BASE || window.location.origin;
+    }
+
+    (function syncCompanyLink() {
+      const link = document.getElementById("companyServerLink");
+      if (link) link.href = resolveTargetBase() + "/";
+      const fUrl = document.getElementById("footerTargetUrl");
+      if (fUrl) fUrl.textContent = resolveTargetBase();
+    })();
+
+    // Notify Company Server of Attacker Event with Forensic Metadata
     async function notifyCompanyServer(eventType, meta = {}) {
-      const base = window.TARGET_API_BASE || "http://127.0.0.1:8080";
+      const base = resolveTargetBase();
       const user = typeof meta === "string" ? meta : (meta.user || sessionStorage.getItem("kali_user") || "root");
-      const ip = (window.AttackerState && window.AttackerState.apparentIp) || meta.ip || "185.220.101.45 (Tor Relay)";
+      const ip = (window.AttackerState && window.AttackerState.vpnConnected && window.AttackerState.apparentIp) || meta.ip || "";
       
       const payloadData = typeof meta === "object" ? {
         event: eventType,
@@ -706,7 +719,7 @@
     function handleReset() {
       playAlarmSound();
       if (window.confirm("Reset all threat alerts, incident records, and security audit sessions?")) {
-        const base = window.TARGET_API_BASE || "http://127.0.0.1:8080";
+        const base = resolveTargetBase();
         fetch(`${base}/api/reset-demo`).then(() => {
           window.location.reload();
         }).catch(() => {

@@ -9,7 +9,7 @@ venv/
 venv.bak/
 .env
 .env.*
-!lab_sandbox/secrets/.env
+!.env.example
 *.db
 *.sqlite3
 .pytest_cache/
@@ -23,3 +23,4 @@ Thumbs.db
 *.log
 dpb_storage/
 submitted_reports/
+lab_sandbox/

@@ -596,7 +596,9 @@
   </div>
 
   <script>
-    const TARGET_API_BASE = "{{ target_api_base|default('http://127.0.0.1:8080') }}";
+    const TARGET_API_BASE = (window.location.port === "9000")
+      ? `${window.location.protocol}//${window.location.hostname}:8080`
+      : "{{ target_api_base|default('http://127.0.0.1:8080') }}";
 
     // Matrix Background Rain Canvas Effect
     (function initMatrix() {

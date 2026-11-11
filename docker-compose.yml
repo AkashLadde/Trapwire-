@@ -1,0 +1,46 @@
+# One-command TRAPWIRE stack: MySQL + the FastAPI defender server.
+#   docker compose up --build
+# Then open http://127.0.0.1:8080/
+#
+# Note: the physical ESP32 alert node is USB and can't be reached from inside a
+# container. For a hardware demo, run the app directly on the host instead
+# (uvicorn app.main:app --port 8080) with MySQL still provided by this compose.
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: trapwire_db
+      MYSQL_USER: trapwire
+      MYSQL_PASSWORD: strongpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - trapwire_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: db
+      MYSQL_PORT: "3306"
+      MYSQL_USER: trapwire
+      MYSQL_PASSWORD: strongpass
+      MYSQL_DATABASE: trapwire_db
+      TRAPWIRE_SECRET: change-me-to-a-long-random-string
+      TRAPWIRE_HW: "off"
+    ports:
+      - "8080:8080"
+
+volumes:
+  trapwire_mysql:

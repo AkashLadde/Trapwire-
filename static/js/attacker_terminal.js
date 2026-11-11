@@ -7,7 +7,12 @@
 (function () {
   "use strict";
 
-  const API_BASE = window.TARGET_API_BASE || "http://127.0.0.1:8080";
+  const API_BASE = (function () {
+    if (window.location.port === "9000") {
+      return `${window.location.protocol}//${window.location.hostname}:8080`;
+    }
+    return window.TARGET_API_BASE || window.location.origin;
+  })();
 
   // --- Virtual Filesystem Model ---
   const VIRTUAL_FS = {
@@ -27,15 +32,8 @@
 ╚══════════════════════════════════════════════════════════════════════╝
 
 Record Set Preview:
-+---------------+---------------------+-----------------------------+-------------------+
-| Order ID      | Customer Name       | Email                       | Phone             |
-+---------------+---------------------+-----------------------------+-------------------+
-| ORD-749201    | Aarav Sharma        | aarav.s82@example.test      | +91-90000-00001   |
-| ORD-839104    | Ananya Reddy        | ananya.r14@example.test     | +91-90000-00002   |
-| ORD-194820    | Kabir Verma         | kabir.v55@example.test      | +91-90000-00003   |
-| ORD-402918    | Meera Iyer          | meera.i99@example.test      | +91-90000-00004   |
-+---------------+---------------------+-----------------------------+-------------------+
-[!] Sensitive fields (Aadhaar/PAN/Card) are isolated in honeypot vault.`
+  Run `show records` to query live records via GET /api/orders.
+[!] Sensitive fields (Aadhaar/PAN/Card) are hashed in /api/export (salted SHA-256) and never exposed raw.`
       },
       "client_records.enc": {
         size: "4.8 MB",
@@ -137,17 +135,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       "Welcome@123", "qwerty123", "Admin@2026!", "letmein123"
     ]
   };
-
-  function getAttackerHeaders(extraHeaders = {}) {
-    let ip = state.apparentIp ? state.apparentIp.replace(/\s*\(.*\)/, "").trim() : "";
-    if (!ip || ip === "127.0.0.1") ip = "185.20.209.0";
-    return {
-      "X-Forwarded-For": ip,
-      "X-Real-IP": ip,
-      "X-Attacker-IP": ip,
-      ...extraHeaders
-    };
-  }
+  window.AttackerState = state;
 
   // DOM Elements
   const termOutput = document.getElementById("termOutput");
@@ -439,10 +427,10 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
         await sleep(200);
 
         const hops = [
-          { name: "Frankfurt (Relay 1)", ip: "45.155.204.12" },
-          { name: "Tokyo (Relay 2)", ip: "103.4.17.88" },
-          { name: "Toronto (Relay 3)", ip: "162.219.176.5" },
-          { name: `${node} (Exit Node)`, ip: "185.220.101.45" }
+          { name: "Simulated Relay 1 (TEST-NET-1)", ip: "192.0.2.12" },
+          { name: "Simulated Relay 2 (TEST-NET-2)", ip: "198.51.100.88" },
+          { name: "Simulated Relay 3 (TEST-NET-3)", ip: "203.0.113.5" },
+          { name: `${node} (Simulated Exit)`, ip: "198.51.100.45" }
         ];
 
         for (let i = 0; i < hops.length; i++) {
@@ -452,7 +440,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
 
         state.vpnConnected = true;
         state.vpnNode = node.toUpperCase();
-        state.apparentIp = `185.220.101.45 (${node})`;
+        state.apparentIp = `198.51.100.45 (${node})`;
 
         printLine(`<span class='term-tag tag-success'>[+]</span> VPN Circuit established! Apparent IP: <b>${state.apparentIp}</b>`, "success");
         printLine("<span class='term-tag tag-warn'>[!]</span> NOTE: VPN spoofing is cosmetic only. Real connecting IP remains visible to server.", "warning");
@@ -549,7 +537,6 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
           const body = new URLSearchParams({ username: username, password: pw });
           const res = await fetch(`${API_BASE}/api/login`, {
             method: "POST",
-            headers: getAttackerHeaders({ "Content-Type": "application/x-www-form-urlencoded" }),
             body: body,
             credentials: "include"
           });
@@ -649,9 +636,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine(`[+] Target Endpoint: <code>GET ${API_BASE}/lab/shop/product?id=...</code>`, "cyan");
       printLine(`[+] Injection Payload: <b style="color:#f87171;">${payload}</b>`, "error");
       try {
-        const res = await fetch(`${API_BASE}/lab/shop/product?id=${encodeURIComponent(payload)}`, {
-          headers: getAttackerHeaders()
-        });
+        const res = await fetch(`${API_BASE}/lab/shop/product?id=${encodeURIComponent(payload)}`);
         const data = await res.json();
         printLine(`[*] Query the server really executed: <code>${data.executed_query}</code>`, "dim");
         if (data.error) printLine(`[!] Database error returned by the server: ${data.error}`, "warning");
@@ -687,7 +672,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       try {
         const res = await fetch(`${API_BASE}/lab/shop/review`, {
           method: "POST",
-          headers: getAttackerHeaders({ "Content-Type": "application/json" }),
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ product_id: 1, author: "attacker", comment: payload })
         });
         const data = await res.json();
@@ -714,9 +699,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine("<span class='term-tag tag-warn'>[PATH-TRAVERSAL]</span> Sending REAL traversal request to the decoy lab...", "warning");
       printLine(`[+] Target: <code>GET ${API_BASE}/lab/files/download?name=${targetPath}</code>`, "cyan");
       try {
-        const res = await fetch(`${API_BASE}/lab/files/download?name=${encodeURIComponent(targetPath)}`, {
-          headers: getAttackerHeaders()
-        });
+        const res = await fetch(`${API_BASE}/lab/files/download?name=${encodeURIComponent(targetPath)}`);
         const text = await res.text();
         printLine(`[*] Server responded HTTP ${res.status}:`, "info");
         printLine(`<pre>${esc(text.slice(0, 900))}</pre>`, res.ok ? "success" : "error");
@@ -735,9 +718,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine("<span class='term-tag tag-warn'>[IDOR]</span> Enumerating decoy customer records with NO authorisation...", "warning");
       for (let i = 1; i <= 3; i++) {
         try {
-          const res = await fetch(`${API_BASE}/lab/api/customers/${i}`, {
-            headers: getAttackerHeaders()
-          });
+          const res = await fetch(`${API_BASE}/lab/api/customers/${i}`);
           const data = await res.json();
           printLine(`  [${i}] HTTP ${res.status} -> ${JSON.stringify(data)}`, "success");
         } catch (err) {
@@ -758,9 +739,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       printLine("<span class='term-tag tag-warn'>[SSRF]</span> Asking the server to fetch a URL on our behalf...", "warning");
       printLine(`[+] URL: <code>${target}</code>`, "cyan");
       try {
-        const res = await fetch(`${API_BASE}/lab/fetch?url=${encodeURIComponent(target)}`, {
-          headers: getAttackerHeaders()
-        });
+        const res = await fetch(`${API_BASE}/lab/fetch?url=${encodeURIComponent(target)}`);
         const text = await res.text();
         printLine(`[*] Server responded HTTP ${res.status}:`, "info");
         printLine(`<pre>${esc(text.slice(0, 900))}</pre>`, res.ok ? "success" : "error");
@@ -829,10 +808,10 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
             printLine(`${id}${name}${cty}${st}${ph}`, "info");
           });
         } else {
-          printLine("ORD-749201  Decoy Customer      Bengaluru   Delivered    +91 90000-00001", "info");
+          printLine("  (No customer order records found on Company Dashboard)", "dim");
         }
       } catch (e) {
-        printLine("ORD-749201  Decoy Customer      Bengaluru   Delivered    +91 90000-00001", "info");
+        printLine(`  [!] Failed to fetch live orders: ${e.message}`, "error");
       }
       printLine("─────────────────────────────────────────────────────────────────────────────", "dim");
       printLine("Use <b>export data</b> to dump full cryptographic export package.", "warning");
@@ -844,10 +823,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
 
     export: async () => {
       if (!state.isAuthenticated) {
-        printLine("<span class='term-tag tag-error'>[ERROR]</span> Authentication required.", "error");
-        printLine("[!] You must authenticate before attempting data export.", "warning");
-        printLine("[*] Tip: Run <b>bruteforce --user admin</b> first to crack target credentials.", "cyan");
-        return;
+        printLine("<span class='term-tag tag-warn'>[*]</span> Session not authenticated — attempting unauthenticated export bypass on /api/export...", "warning");
       }
 
       printLine("<span class='term-tag tag-info'>[+]</span> Preparing data export from " + API_BASE + "...", "cyan");
@@ -881,15 +857,17 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
 
       // Fetch actual backend export
       let payload = null;
-      let recCount = 1;
+      let recCount = 0;
+      let headerTrackingUrl = null;
       try {
-        const res = await fetch(`${API_BASE}/api/export`, {
-          headers: getAttackerHeaders(),
-          credentials: "include"
-        });
+        const res = await fetch(`${API_BASE}/api/export?source=attacker`, { credentials: "include" });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        headerTrackingUrl = res.headers.get("X-Canary-Tracking-Url");
         payload = await res.json();
         if (Array.isArray(payload)) {
-          recCount = payload.length;
+          recCount = (payload.length === 1 && payload[0] && payload[0].order_id === "NONE") ? 0 : payload.length;
         }
 
         // Download JSON file locally
@@ -901,6 +879,8 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
         a.click();
       } catch (err) {
         console.error("Export fetch error:", err);
+        printLine(`<span class='term-tag tag-error'>[!]</span> Export failed: ${err.message}`, "error");
+        return;
       }
 
       await sleep(200);
@@ -926,7 +906,7 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
 
       printLine("<span class='term-tag tag-success'>[+]</span> <b>DATA EXFILTRATION ACQUIRED</b>", "success");
       printLine(`<span class='term-tag tag-info'>[+]</span> RECORDS: ${recCount}`, "info");
-      printLine("<span class='term-tag tag-honey'>[+]</span> <b>HONEYPOT TRIGGER: ACTIVE</b> (All personal data SHA-256 hashed & synthetic)", "error");
+      printLine("<span class='term-tag tag-honey'>[+]</span> <b>HONEYPOT TRIGGER: ACTIVE</b> (Sensitive IDs salted SHA-256 hashed &amp; canary-tracked)", "error");
       printLine(`<span class='term-tag tag-warn'>[+]</span> INCIDENT ID: <b>${state.incidentId}</b>`, "warning");
       printLine("<span class='term-tag tag-error'>[!]</span> <b>DEFENDER ALERT: GENERATED</b> (Logged to Company Security Center & DPB Registry)", "error");
       printLine("");
@@ -937,8 +917,8 @@ c897bf1277a06f34e6e66cf533b769ea8d407670733d3d622f6d2f36b6d51012 : Admin@2026!`
       }
 
       // Trigger Canary Token phone-home beacon
-      if (payload && Array.isArray(payload) && payload[0] && payload[0]._tracking_invoice_url) {
-        const trackingUrl = payload[0]._tracking_invoice_url;
+      const trackingUrl = (payload && Array.isArray(payload) && payload[0] && payload[0]._tracking_invoice_url) || headerTrackingUrl;
+      if (trackingUrl) {
         printLine("<span class='term-tag tag-warn'>[*]</span> Opening invoice preview...", "dim");
         
         setTimeout(() => {

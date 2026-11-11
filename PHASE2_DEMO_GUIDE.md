@@ -43,10 +43,10 @@ detection **server-side** hoti hai — attacker console ki koi zaroorat nahi.
 ```bash
 pip install -r requirements.txt
 python run_servers.py
-# Defender + lab:  http://127.0.0.1:8000/lab/      (saari attack surfaces ki list)
+# Defender + lab:  http://127.0.0.1:8080/lab/      (saari attack surfaces ki list)
 # Attacker console: http://127.0.0.1:9000  (commands: sqli, xss, idor, ssrf, traversal)
 # Lab band karna ho to:  TRAPWIRE_LAB_MODE=0 python run_servers.py
-# Demo se pehle fresh state:  POST http://127.0.0.1:8000/lab/reset
+# Demo se pehle fresh state:  POST http://127.0.0.1:8080/lab/reset
 ```
 
 ## 4. Verified test results (21 Oct 2026, is build par asal run)
@@ -59,7 +59,7 @@ python run_servers.py
   **10 server-side lab alerts + 5 auto-filed reports, bina
   `/api/attacker-session-event` ko ek baar bhi call kiye.**
 - **sqlmap (independent proof):**
-  `sqlmap -u "http://127.0.0.1:8000/lab/shop/product?id=1" --batch --dbms=sqlite --tables`
+  `sqlmap -u "http://127.0.0.1:8080/lab/shop/product?id=1" --batch --dbms=sqlite --tables`
   → injection point `id` confirm (boolean-based blind + UNION query, 4 columns),
   back-end DBMS: SQLite, **5 tables enumerate** (lab_users, lab_products,
   lab_customers, lab_reviews, sqlite_sequence). Usi dauraan detection stats me
@@ -69,10 +69,10 @@ python run_servers.py
 
 ## 5. Viva-day demo script (~6 minute)
 
-1. `http://127.0.0.1:8000/lab/` kholo — attack surface dikhao.
+1. `http://127.0.0.1:8080/lab/` kholo — attack surface dikhao.
 2. Dusre tab me SOC dashboard (company login) kholo.
 3. **Terminal/curl se** (console se nahi!): 
-   `curl "http://127.0.0.1:8000/lab/shop/product?id=-1 UNION SELECT id, username, password, role FROM lab_users-- "` (URL-encode karke)
+   `curl "http://127.0.0.1:8080/lab/shop/product?id=-1 UNION SELECT id, username, password, role FROM lab_users-- "` (URL-encode karke)
    → decoy users screen par; dashboard par **SQL INJECTION CONFIRMED** alert live.
 4. sqlmap wali command chalao → tables enumerate; stats page par probe count badhta dikhao.
 5. Console (port 9000) se `xss` chalao → mili hui link kholo → alert box asal me execute; dashboard par XSS CONFIRMED.
@@ -96,7 +96,7 @@ A: "Sir, sahi pakde — ye signature + behaviour based hai (IDOR enumeration cou
 ## 7. Safety rules (kabhi todna nahi)
 
 1. Lab sirf **127.0.0.1** par — college LAN ya internet par kabhi expose nahi.
-2. Burp/ZAP/sqlmap ka target sirf apne ports (8000/3000/8080) — bahar ki koi site nahi.
+2. Burp/ZAP/sqlmap ka target sirf apne ports (8080/9000) — bahar ki koi site nahi.
 3. Saara data synthetic decoy hai; decoy `.env` ki keys kahin asli jagah use nahi karni (wohi honeytoken tripwire hai).
 4. Demo ke baad server band; viva se pehle `POST /lab/reset` se fresh state.
 

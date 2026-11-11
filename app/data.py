@@ -1,89 +1,17 @@
 """
-Generates two datasets:
+TRAPWIRE — Data Minimization, Masking & Salted One-Way SHA-256 Export Protection
 
-1. CUSTOMERS  -> what a genuine, trusted admin sees (realistic looking
-   e-commerce order data, all fields fully synthetic/random).
-2. honeypot data -> what a flagged/suspicious session sees instead. It
-   LOOKS identical in structure to the real data (that's the deception),
-   but every record is fake and carries a hidden canary field that pings
-   the server the moment it's "opened" by the attacker.
-
-All PII values below (Aadhaar/PAN/phone/etc.) are randomly generated,
-NOT real people's data.
+Contains zero hardcoded/synthetic customer datasets. Real order records come
+strictly from the database (`app/database.py`). During an admin view, PII is
+masked per DPDP Act, 2023 data-minimization guidelines; during data exfiltration
+(`build_hashed_export`), every sensitive PII field on real order records is
+replaced with a salted one-way SHA-256 digest and tagged with a canary beacon.
 """
-import random
-import string
-import uuid
+
 import hashlib
-
-FIRST_NAMES = ["Aarav", "Vivaan", "Aditya", "Ishaan", "Kabir", "Ananya",
-               "Diya", "Meera", "Priya", "Rohan", "Sanya", "Kavya",
-               "Arjun", "Neha", "Rahul", "Pooja"]
-LAST_NAMES = ["Sharma", "Verma", "Reddy", "Iyer", "Nair", "Gupta",
-              "Khan", "Patil", "Joshi", "Mehta", "Singh", "Rao"]
-CITIES = ["Bengaluru", "Mumbai", "Delhi", "Hyderabad", "Pune",
-          "Chennai", "Bidar", "Kolkata", "Ahmedabad", "Jaipur"]
-ITEMS = ["Wireless Earbuds", "Running Shoes", "Kurta Set", "Laptop Bag",
-         "Smart Watch", "Cotton Saree", "Bluetooth Speaker", "Backpack",
-         "Sunglasses", "Formal Shirt"]
-STATUSES = [("Delivered", 5), ("Shipped", 2), ("Processing", 2), ("Pending", 1)]
-
-
-def _rand_digits(n):
-    return "".join(random.choices(string.digits, k=n))
-
-
-def _generate_aadhaar():
-    return f"{_rand_digits(4)}-{_rand_digits(4)}-{_rand_digits(4)}"
-
-
-def _generate_pan():
-    letters = "".join(random.choices(string.ascii_uppercase, k=5))
-    digits = _rand_digits(4)
-    last = random.choice(string.ascii_uppercase)
-    return f"{letters}{digits}{last}"
-
-
-def _generate_phone():
-    return f"+91 {random.choice(['7','8','9'])}{_rand_digits(9)}"
-
-
-def _generate_email(name):
-    domain = random.choice(["gmail.com", "yahoo.com", "outlook.com"])
-    return f"{name.lower()}{random.randint(1,999)}@{domain}"
-
-
-def _generate_card_last4():
-    return _rand_digits(4)
-
-
-def _generate_status():
-    pool = []
-    for label, weight in STATUSES:
-        pool += [label] * weight
-    return random.choice(pool)
-
-
-def generate_customers(n=14):
-    records = []
-    for _ in range(n):
-        first = random.choice(FIRST_NAMES)
-        last = random.choice(LAST_NAMES)
-        name = f"{first} {last}"
-        records.append({
-            "order_id": "ORD" + _rand_digits(6),
-            "customer_name": name,
-            "phone": _generate_phone(),
-            "email": _generate_email(first),
-            "aadhaar": _generate_aadhaar(),
-            "pan": _generate_pan(),
-            "address": f"{random.randint(1,999)}, MG Road, {random.choice(CITIES)}",
-            "card_last4": _generate_card_last4(),
-            "item": random.choice(ITEMS),
-            "order_value": random.randint(299, 24999),
-            "status": _generate_status(),
-        })
-    return records
+import os
+import secrets
+from typing import Dict, List, Optional
 
 
 def mask_aadhaar(value: str) -> str:
@@ -107,76 +35,54 @@ def mask_card(value: str) -> str:
 
 
 def truncate_hash(value: str, length: int = 16) -> str:
-    """For on-screen display only -- the full hash is still what's in
-    the actual exported file, this just keeps the admin table readable."""
     return value[:length] + "…" if len(value) > length else value
 
 
-def _hash_field(value: str) -> str:
-    """One-way SHA-256 hash, shown as a hex digest. Even if this export
-    is exfiltrated, the underlying value can't be recovered from it --
-    this is standard cryptographic data protection, not obfuscation."""
-    return hashlib.sha256(value.encode()).hexdigest()
+def salted_sha256(value: str, salt: str) -> str:
+    """Irreversible salted one-way SHA-256 hex digest for sensitive PII."""
+    normalized = (value or "").strip()
+    return hashlib.sha256(f"{salt}:{normalized}".encode("utf-8")).hexdigest()
 
 
-def generate_honeypot_view(n=14):
+def build_hashed_export(
+    canary_url_base: str,
+    token: str,
+    source_records: Optional[List[Dict]] = None,
+    salt: Optional[str] = None,
+) -> List[Dict]:
     """
-    What a flagged/suspicious session sees ON SCREEN in the dashboard.
-    Deliberately realistic-looking (same as real data, just synthetic)
-    so the deception holds -- an attacker who sees obviously-fake or
-    obviously-hashed data on screen would immediately recognise the
-    honeypot and abandon the attempt before ever exporting anything.
+    Build a DPDP-safe export from REAL database order records.
+    - Returns [] when no orders exist in the database (never invents fake rows).
+    - Hashes every sensitive PII field (customer_name, phone, email, aadhaar,
+      pan, card_last4, address) with salted one-way SHA-256 so zero plaintext
+      PII ever leaves the server.
+    - Embeds `_tracking_invoice_url` canary token for forensic attribution.
     """
-    return generate_customers(n)
+    if not source_records:
+        return []
 
-
-def generate_honeypot_export(canary_url_base: str, token: str, source_records: list = None, n: int = None):
-    """
-    Produces the canary-laced export served to an attacker.
-    If source_records (the actual live orders in the company dashboard) are available,
-    it exports those EXACT orders, but replaces all sensitive fields (Aadhaar, PAN,
-    Phone, Email, Card) with one-way SHA-256 cryptographic hashes and embeds the
-    active Canary tracking beacon. This ensures:
-    1. The attacker gets the exact number and identity of records present on the dashboard.
-    2. No genuine unmasked PII ever leaves the system.
-    3. Any attempt by the attacker to open the file trips the canary attribution beacon.
-    """
     canary_link = f"{canary_url_base}/canary/{token}"
+    effective_salt = salt or os.getenv("TRAPWIRE_HASH_SALT") or token or secrets.token_hex(16)
 
-    if source_records and len(source_records) > 0:
-        exported = []
-        for orig in source_records:
-            r = dict(orig)
-            raw_aadhaar = str(r.get("aadhaar") or "")
-            raw_pan = str(r.get("pan") or "")
-            raw_phone = str(r.get("phone") or "")
-            raw_email = str(r.get("email") or "")
-            raw_card = str(r.get("card_last4") or "")
+    exported: List[Dict] = []
+    for orig in source_records:
+        r = dict(orig)
+        for k in ("aadhaar_display", "pan_display", "card_display", "phone_display", "email_display"):
+            r.pop(k, None)
 
-            r["aadhaar"] = _hash_field(raw_aadhaar) if raw_aadhaar else _hash_field("AADHAAR_NULL")
-            r["pan"] = _hash_field(raw_pan) if raw_pan else _hash_field("PAN_NULL")
-            r["phone"] = _hash_field(raw_phone) if raw_phone else _hash_field("PHONE_NULL")
-            r["email"] = _hash_field(raw_email) if raw_email else _hash_field("EMAIL_NULL")
-            r["card_last4"] = (_hash_field(raw_card)[:12]) if raw_card else _hash_field("CARD_NULL")[:12]
+        for field in ("customer_name", "phone", "email", "aadhaar", "pan", "card_last4", "address"):
+            raw_val = str(r.get(field) or "")
+            r[field] = salted_sha256(raw_val if raw_val else f"EMPTY_{field}", effective_salt)
 
-            for k in ("aadhaar_display", "pan_display", "card_display", "phone_display", "email_display"):
-                r.pop(k, None)
-
-            r["_data_protection_note"] = "Sensitive fields are SHA-256 hashed and cannot be reversed."
-            r["_tracking_invoice_url"] = canary_link
-            exported.append(r)
-        return exported
-
-    # Fallback if no orders exist yet: 1 decoy canary trap record
-    count = n if n is not None else 1
-    records = generate_customers(count)
-    for r in records:
-        r["order_id"] = "ORD" + "".join(random.choices(string.digits, k=6))
-        r["aadhaar"] = _hash_field(r["aadhaar"])
-        r["pan"] = _hash_field(r["pan"])
-        r["phone"] = _hash_field(r["phone"])
-        r["email"] = _hash_field(r["email"])
-        r["card_last4"] = _hash_field(r["card_last4"])[:12]
-        r["_data_protection_note"] = "Sensitive fields are SHA-256 hashed and cannot be reversed."
+        r["_hash_algorithm"] = "SHA-256 (salted)"
+        r["_data_protection_note"] = (
+            "Sensitive PII fields are hashed with salted one-way SHA-256 and cannot be reversed."
+        )
         r["_tracking_invoice_url"] = canary_link
-    return records
+        exported.append(r)
+
+    return exported
+
+
+# Backwards-compatible alias
+generate_honeypot_export = build_hashed_export

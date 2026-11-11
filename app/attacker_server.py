@@ -1,7 +1,7 @@
 """
 TRAPWIRE — Independent Attacker Portal Server (Server 2)
 Dedicated Kali Linux Offensive Pentest Console running on Port 9000.
-Targets the Company Defender Server at http://127.0.0.1:8000.
+Targets the Company Defender Server at http://127.0.0.1:8080.
 """
 
 import os
@@ -30,11 +30,12 @@ templates = Jinja2Templates(directory=templates_dir)
 
 TARGET_COMPANY_URL = os.getenv("COMPANY_URL", "http://127.0.0.1:8080")
 
+# [SYNTHETIC LAB SIMULATOR] RFC 5737 TEST-NET addresses for simulated exit nodes
 VPN_NODES = [
-    {"label": "Netherlands - Amsterdam", "fake_ip": "185.20.209.0"},
-    {"label": "Singapore", "fake_ip": "175.41.141.147"},
-    {"label": "USA - New York", "fake_ip": "161.185.157.24"},
-    {"label": "Germany - Frankfurt", "fake_ip": "172.104.137.31"},
+    {"label": "Simulated Exit — Zone A", "fake_ip": "198.51.100.10"},
+    {"label": "Simulated Exit — Zone B", "fake_ip": "203.0.113.20"},
+    {"label": "Simulated Exit — Zone C", "fake_ip": "192.0.2.30"},
+    {"label": "Simulated Exit — Zone D", "fake_ip": "198.51.100.40"},
 ]
 
 ATTACK_WORDLIST = [

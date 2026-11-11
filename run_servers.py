@@ -16,18 +16,20 @@ os.environ["TRAPWIRE_TARGET_PORTAL"] = "http://127.0.0.1:8080"
 
 
 def run_company_server():
-    print("[SERVER 1] Launching Company Portal on http://127.0.0.1:8080 ...", flush=True)
+    print("[SERVER 1] Launching Company Portal on http://127.0.0.1:8080 ...")
     subprocess.run([
-        sys.executable, "-u", "-m", "uvicorn", "app.main:app",
-        "--host", "127.0.0.1", "--port", "8080"
+        sys.executable, "-m", "uvicorn", "app.main:app",
+        "--host", "127.0.0.1", "--port", "8080",
+        "--reload", "--reload-dir", "app", "--reload-dir", "templates", "--reload-dir", "static"
     ])
 
 
 def run_attacker_server():
-    print("[SERVER 2] Launching Attacker Portal on http://127.0.0.1:9000 ...", flush=True)
+    print("[SERVER 2] Launching Attacker Portal on http://127.0.0.1:9000 ...")
     subprocess.run([
-        sys.executable, "-u", "-m", "uvicorn", "app.attacker_server:app",
-        "--host", "127.0.0.1", "--port", "9000"
+        sys.executable, "-m", "uvicorn", "app.attacker_server:app",
+        "--host", "127.0.0.1", "--port", "9000",
+        "--reload", "--reload-dir", "app", "--reload-dir", "templates", "--reload-dir", "static"
     ])
 
 

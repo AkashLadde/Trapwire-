@@ -1,275 +1,193 @@
 """
 =====================================================================================
-TRAPWIRE — Physical Hardware Serial Bridge & Threat Stream Relay
+TRAPWIRE — OPTIONAL Standalone Hardware Serial Bridge
 =====================================================================================
-Connects the TrapWire Defender Backend (FastAPI WebSocket) to physical hardware:
- 1. USB Serial MCU (ESP32 DevKit V1 / NodeMCU Threat Siren, OLED, Buzzer & LEDs).
- 2. Live Threat Telemetry forwarder for physical SOC alerting.
+You usually DON'T need this file. Since firmware v1.0 the ESP32 bridge is built
+straight into the server (app/hardware.py): plug the board in by USB, start
+TRAPWIRE, done. The red LED, buzzer and OLED fire automatically and the SOC
+dashboard shows a live "virtual OLED" mirror.
+
+Use THIS standalone relay only when the ESP32 is attached to a DIFFERENT machine
+than the one running the server (e.g. the server is on a Raspberry Pi in a rack
+and the alert node sits on your desk). It subscribes to the server's live alert
+WebSocket and forwards each alert to the ESP32 over USB serial, using the EXACT
+SAME wire protocol as the built-in bridge — so the same flashed sketch
+(hardware/esp32_threat_siren/) works either way.
+
+    IMPORTANT: run EITHER the built-in bridge OR this relay, never both on the
+    same board — they would fight over the serial port. On the SERVER, disable
+    the built-in bridge first:
+            export TRAPWIRE_HW=off        (Windows: set TRAPWIRE_HW=off)
+    then run this relay on the machine the board is plugged into.
 
 Usage:
-    # Auto-detects COM port (e.g. COM7 on Windows or /dev/ttyUSB0 on Linux):
-    python hardware/serial_bridge.py
-
-    # Or specify port manually:
-    python hardware/serial_bridge.py --port COM7 --baud 115200
-
-    # Or fire an immediate physical hardware alarm test:
-    python hardware/serial_bridge.py --test
+    pip install pyserial websockets requests
+    python hardware/serial_bridge.py                         # auto-detect port + localhost
+    python hardware/serial_bridge.py --port COM7 --server http://192.168.1.10:8080
+    python hardware/serial_bridge.py --test                  # fire one test frame
+    python hardware/serial_bridge.py --list                  # list serial ports
 =====================================================================================
 """
-
+import argparse
+import json
 import os
 import sys
 import time
-import json
-import asyncio
-import argparse
+from datetime import datetime
+
 import requests
 
-try:
-    if sys.stdout.encoding != 'utf-8':
-        sys.stdout.reconfigure(encoding='utf-8')
-except Exception:
-    pass
+# One source of truth: reuse the built-in bridge's alert->frame logic so this
+# relay and app/hardware.py always speak an identical protocol to the firmware.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app import hardware  # noqa: E402
 
 try:
     import serial
-    import serial.tools.list_ports
-    HAS_SERIAL = True
+    from serial.tools import list_ports
 except ImportError:
-    HAS_SERIAL = False
+    serial = None
+    list_ports = None
 
 try:
-    import websockets
-    HAS_WEBSOCKETS = True
+    import websockets  # optional; we fall back to HTTP polling without it
+    import asyncio
+    HAS_WS = True
 except ImportError:
-    HAS_WEBSOCKETS = False
+    HAS_WS = False
 
-DEFAULT_WS_URL = os.getenv("SERVER_WS_URL", "ws://127.0.0.1:8080/ws/alerts")
-DEFAULT_HTTP_URL = os.getenv("SERVER_HTTP_URL", "http://127.0.0.1:8080")
+DEFAULT_HTTP = os.getenv("SERVER_HTTP_URL", "http://127.0.0.1:8080")
 
 
-def auto_detect_mcu_port():
-    """Scans and automatically selects the ESP32 / USB-to-UART COM port."""
-    if not HAS_SERIAL:
+def open_serial(port, baud):
+    if serial is None:
+        print("pyserial missing:  pip install pyserial")
         return None
-    ports = list(serial.tools.list_ports.comports())
-    if not ports:
+    port = port or hardware.find_serial_port()
+    if not port:
+        print("No ESP32 USB-serial port found. Specify one with --port COM7 or --list.")
         return None
-    # 1. Look for known microcontroller USB-UART bridge chips
-    for p in ports:
-        desc = (p.description or "").lower()
-        hwid = (p.hwid or "").lower()
-        if any(chip in desc or chip in hwid for chip in ["cp210", "ch340", "ch341", "ftdi", "uart", "usb serial", "esp32"]):
-            return p.device
-    # 2. If exactly one COM port exists, choose it
-    if len(ports) == 1:
-        return ports[0].device
-    return None
+    ser = serial.Serial()
+    ser.port, ser.baudrate, ser.timeout = port, baud, 0.1
+    ser.dtr = False
+    ser.rts = False
+    ser.open()
+    time.sleep(2.0)  # let the board finish booting
+    print(f"[+] ESP32 connected on {port} @ {baud}")
+    return ser
 
 
-def print_available_ports():
-    if not HAS_SERIAL:
-        print("[!] pyserial is not installed. Run: pip install pyserial websockets")
-        return
-    ports = list(serial.tools.list_ports.comports())
-    print("\n--- Available USB Serial / COM Ports ---")
-    if not ports:
-        print("  [x] No USB Serial devices currently detected.")
-    for p in ports:
-        print(f"  • {p.device}: {p.description} [{p.hwid}]")
-    print("----------------------------------------\n")
+_count = {"n": 0}
 
 
-class HardwareBridge:
-    def __init__(self, mcu_port: str = None, mcu_baud: int = 115200, ws_url: str = DEFAULT_WS_URL, http_url: str = DEFAULT_HTTP_URL):
-        self.mcu_port = mcu_port
-        self.mcu_baud = mcu_baud
-        self.ws_url = ws_url
-        self.http_url = http_url
-        self.mcu_ser = None
+def alert_to_line(alert):
+    """Turn a server alert dict into an ALERT|... line, or None to skip."""
+    frame = hardware._classify(alert)
+    if not frame:
+        return None
+    _count["n"] += 1
+    frame["count"] = _count["n"]
+    return hardware._encode(frame)
 
-        if HAS_SERIAL:
-            if not self.mcu_port:
-                self.mcu_port = auto_detect_mcu_port()
 
-            if self.mcu_port:
-                try:
-                    self.mcu_ser = serial.Serial(self.mcu_port, self.mcu_baud, timeout=1)
-                    print(f"[+] [MCU BRIDGE] Connected to ESP32 on {self.mcu_port} @ {self.mcu_baud} baud.")
-                    # Allow ESP32 reset sequence to settle
-                    time.sleep(1.8)
-                    # Send startup handshake
-                    self.send_startup_ping()
-                except serial.SerialException as e:
-                    print(f"[!] [MCU PORT BUSY] Could not open {self.mcu_port}: {e}")
-                    print("    TIP: Make sure the Arduino IDE Serial Monitor is CLOSED so this script can access the port.")
-                except Exception as e:
-                    print(f"[!] [MCU BRIDGE ERROR] {e}")
-            else:
-                print("[-] [MCU BRIDGE] Running in Virtual/Emulated mode (No physical ESP32 detected on USB).")
-        else:
-            print("[-] [MCU BRIDGE] Running in Virtual mode (pyserial library not installed).")
+def ws_url_from_http(http_url):
+    return http_url.replace("http://", "ws://").replace("https://", "wss://").rstrip("/") + "/ws/alerts"
 
-    def send_startup_ping(self):
-        """Sends an initial diagnostic handshake to the ESP32."""
-        payload = json.dumps({
-            "level": "info",
-            "attack_type": "SYSTEM READY",
-            "message": "TRAPWIRE HARDWARE ONLINE",
-            "attacker_ip": "127.0.0.1",
-            "timestamp": int(time.time())
-        }) + "\n"
-        if self.mcu_ser:
-            try:
-                self.mcu_ser.write(payload.encode("utf-8"))
-                print(f"[SERIAL -> ESP32] Handshake sent: {payload.strip()}")
-            except Exception as e:
-                print(f"[SERIAL WRITE ERROR] {e}")
 
-    def forward_to_mcu(self, alert: dict):
-        """Formats and transmits the threat packet over USB Serial to the ESP32."""
-        meta = alert.get("meta") or {}
-        attacker_ip = meta.get("attacker_ip") or meta.get("ip") or "185.20.209.0"
-        if attacker_ip in ("127.0.0.1", "localhost", "::1", "unknown"):
-            attacker_ip = "185.20.209.0"
-
-        raw_msg = alert.get("message", "Threat event detected")
-        raw_type = (meta.get("attack_type") or meta.get("type") or "").lower()
-        msg_upper = raw_msg.upper()
-
-        if "sql" in raw_type or "sql" in msg_upper:
-            atk_type = "SQL INJECTION"
-        elif "xss" in raw_type or "xss" in msg_upper:
-            atk_type = "STORED XSS"
-        elif "traversal" in raw_type or "traversal" in msg_upper or "lfi" in msg_upper:
-            atk_type = "PATH TRAVERSAL"
-        elif "idor" in raw_type or "idor" in msg_upper:
-            atk_type = "IDOR / BOLA"
-        elif "ssrf" in raw_type or "ssrf" in msg_upper:
-            atk_type = "SSRF EXPLOIT"
-        elif "honeytoken" in raw_type or "honeytoken" in msg_upper:
-            atk_type = "HONEYTOKEN HIT"
-        elif "exfiltrat" in raw_type or "export" in msg_upper:
-            atk_type = "EXFILTRATION"
-        elif "login" in raw_type or "brute" in msg_upper or "auth" in msg_upper:
-            atk_type = "BRUTE FORCE"
-        elif "canary" in raw_type or "canary" in msg_upper:
-            atk_type = "CANARY TRAP"
-        elif "test" in raw_type or "test" in msg_upper:
-            atk_type = "HARDWARE TEST"
-        else:
-            atk_type = "CYBER BREACH"
-
-        level = alert.get("level", "critical")
-        if level in ("critical", "emergency", "warning", "high"):
-            level_str = "critical"
-        else:
-            level_str = "info"
-
-        if level_str == "info":
-            return
-
-        payload = json.dumps({
-            "level": level_str,
-            "attack_type": atk_type[:15],
-            "message": atk_type[:15],
-            "attacker_ip": attacker_ip[:15],
-            "timestamp": int(alert.get("timestamp", time.time()))
-        }) + "\n"
-
-        if self.mcu_ser and self.mcu_ser.is_open:
-            try:
-                self.mcu_ser.write(payload.encode("utf-8"))
-                self.mcu_ser.flush()
-                print(f"[⚡ SERIAL -> ESP32] Alert Packet Transmitted: {payload.strip()}")
-            except Exception as e:
-                print(f"[!] [SERIAL TRANSMIT ERROR] {e}")
-        else:
-            print(f"[VIRTUAL SERIAL -> ESP32] {payload.strip()}")
-
-    def handle_threat_event(self, alert: dict):
-        level = alert.get("level", "info").lower()
-        print(f"\n[⚡ LIVE THREAT EVENT] [{level.upper()}] {alert.get('message')}")
-        self.forward_to_mcu(alert)
-
-    async def listen_threat_stream(self):
-        """Subscribes to the live Defender WebSocket alert feed."""
-        print(f"[*] Subscribing to TrapWire Alert Stream: {self.ws_url} ...")
-
-        retry_count = 0
+def run_ws(ser, http_url):
+    async def _main():
+        url = ws_url_from_http(http_url)
+        print(f"[*] Subscribing to live alert stream {url}")
         while True:
             try:
-                if HAS_WEBSOCKETS:
-                    async with websockets.connect(self.ws_url) as ws:
-                        print("[+] Connected to Live SOC Alert WebSocket! Standing by for threat events...")
-                        retry_count = 0
-                        while True:
-                            data_raw = await ws.recv()
-                            try:
-                                alert = json.loads(data_raw)
-                                self.handle_threat_event(alert)
-                            except Exception as json_err:
-                                print(f"[PARSE ERROR] {json_err}")
-                else:
-                    # HTTP Polling fallback
-                    poll_url = f"{self.http_url}/api/alerts/recent"
-                    resp = requests.get(poll_url, timeout=3)
-                    if resp.ok:
-                        alerts = resp.json().get("alerts", [])
-                        if alerts:
-                            self.handle_threat_event(alerts[0])
-                    await asyncio.sleep(2)
+                async with websockets.connect(url) as ws:
+                    print("[+] Alert stream connected. Waiting for threats...")
+                    while True:
+                        raw = await ws.recv()
+                        try:
+                            alert = json.loads(raw)
+                        except Exception:
+                            continue
+                        line = alert_to_line(alert)
+                        if line and ser:
+                            ser.write((line + "\n").encode("ascii", "ignore"))
+                            print(f"    -> {line[:80]}")
             except Exception as e:
-                retry_count += 1
-                wait_sec = min(3 * retry_count, 10)
-                print(f"[STREAM RECONNECTING] Server unavailable: {e}. Retrying in {wait_sec}s...")
-                await asyncio.sleep(wait_sec)
+                print(f"[!] stream dropped ({e}); retrying in 3s")
+                await asyncio.sleep(3)
+    asyncio.run(_main())
+
+
+def run_poll(ser, http_url):
+    """Fallback when the websockets lib isn't installed: poll recent alerts."""
+    print("[*] websockets not installed — polling /api/alerts/recent every 1s")
+    seen = set()
+    sess = requests.Session()
+    while True:
+        try:
+            data = sess.get(f"{http_url}/api/alerts/recent", timeout=3).json()
+            for alert in reversed(data.get("alerts", [])):
+                aid = alert.get("id")
+                if aid in seen:
+                    continue
+                seen.add(aid)
+                line = alert_to_line(alert)
+                if line and ser:
+                    ser.write((line + "\n").encode("ascii", "ignore"))
+                    print(f"    -> {line[:80]}")
+        except Exception as e:
+            print(f"[!] poll error: {e}")
+        time.sleep(1.0)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="TRAPWIRE Physical Hardware Serial Bridge & Threat Relay")
-    parser.add_argument("--port", type=str, default=None, help="COM port for ESP32 (e.g. COM7 or /dev/ttyUSB0). If omitted, auto-detects.")
-    parser.add_argument("--baud", type=int, default=115200, help="Baud rate (default: 115200)")
-    parser.add_argument("--ws", type=str, default=DEFAULT_WS_URL, help="TrapWire WebSocket URL")
-    parser.add_argument("--server", type=str, default=DEFAULT_HTTP_URL, help="TrapWire HTTP URL")
-    parser.add_argument("--test", action="store_true", help="Send an immediate test breach packet to trigger the hardware siren.")
-    args = parser.parse_args()
+    ap = argparse.ArgumentParser(description="TRAPWIRE optional standalone hardware relay")
+    ap.add_argument("--port", help="serial port (COM7 / /dev/ttyUSB0); auto-detect if omitted")
+    ap.add_argument("--baud", type=int, default=115200)
+    ap.add_argument("--server", default=DEFAULT_HTTP, help="TRAPWIRE HTTP base URL")
+    ap.add_argument("--test", action="store_true", help="send one test frame and exit")
+    ap.add_argument("--list", action="store_true", help="list serial ports and exit")
+    args = ap.parse_args()
 
-    print("=" * 72)
-    print(" TRAPWIRE — Physical Threat Siren Hardware Bridge v2.5")
-    print(f" Defender Server:  {args.server}")
-    print(f" WebSocket Stream: {args.ws}")
-    print("=" * 72)
+    if args.list:
+        if list_ports is None:
+            print("pyserial missing:  pip install pyserial")
+            return
+        for p in list_ports.comports():
+            print(f"{p.device:16} {p.description}")
+        print("auto-detected:", hardware.find_serial_port())
+        return
 
-    print_available_ports()
-
-    bridge = HardwareBridge(
-        mcu_port=args.port,
-        mcu_baud=args.baud,
-        ws_url=args.ws,
-        http_url=args.server
-    )
+    ser = open_serial(args.port, args.baud)
+    if not ser:
+        return
 
     if args.test:
-        print("\n[*] Firing Instant Physical Alarm Test Packet to ESP32...")
-        test_alert = {
-            "level": "critical",
-            "message": "SQL INJECTION EXPLOIT DETECTED",
-            "timestamp": int(time.time()),
-            "meta": {
-                "attacker_ip": "185.220.101.45",
-                "isp": "Stiftung Erneuerbare Freiheit",
-                "type": "sqli_attack"
-            }
-        }
-        bridge.handle_threat_event(test_alert)
-        print("[+] Test packet transmitted. Check physical White LED, Red LED, Buzzer, and OLED.\n")
+        frame = {"sev": "C", "type": "SQL INJECTION", "ip": "198.51.100.45",
+                 "isp": "TEST-NET-2 (Bench Self-Test)", "loc": "Lab Bench, Local",
+                 "incident": "INC-TEST1234", "time": datetime.now().strftime("%H:%M:%S"),
+                 "count": 1, "ack": "DPB-TEST", "detail": "/lab/shop/product?id=1"}
+        line = hardware._encode(frame)
+        ser.write((line + "\n").encode())
+        print(f"[+] sent test frame: {line}\n    Check the red LED, buzzer and OLED.")
+        time.sleep(12)
+        ser.write(b"CLEAR\n")
+        ser.close()
+        return
 
+    print("[i] Make sure the server was started with TRAPWIRE_HW=off so the built-in")
+    print("    bridge isn't also holding this port.\n")
     try:
-        asyncio.run(bridge.listen_threat_stream())
+        if HAS_WS:
+            run_ws(ser, args.server)
+        else:
+            run_poll(ser, args.server)
     except KeyboardInterrupt:
-        print("\n[*] Hardware serial bridge stopped by user.")
+        print("\n[*] bridge stopped.")
+        try:
+            ser.close()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

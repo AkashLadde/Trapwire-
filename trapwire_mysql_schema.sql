@@ -1,7 +1,9 @@
 -- ===================================================================
--- TRAPWIRE — Comprehensive MySQL Database Schema
+-- TRAPWIRE — MySQL Database Schema
 -- Digital Personal Data Protection (DPDP) Act, 2023 Compliance &
 -- Intrusion Deception Architecture
+-- Note: Schema only — no hardcoded/dummy records are seeded here.
+-- To optionally load synthetic demo records, run: python seed_sample_data.py
 -- ===================================================================
 
 CREATE DATABASE IF NOT EXISTS `trapwire_db`
@@ -41,6 +43,7 @@ CREATE TABLE IF NOT EXISTS `incidents` (
   `incident_id` VARCHAR(32) PRIMARY KEY,
   `attacker_ip` VARCHAR(64),
   `attacker_isp` VARCHAR(128),
+  `attacker_location` VARCHAR(128),
   `detected_at` DOUBLE,
   `status` VARCHAR(32),
   `stage` VARCHAR(32),
@@ -53,7 +56,14 @@ CREATE TABLE IF NOT EXISTS `canary_hits` (
   `token` VARCHAR(64) NOT NULL,
   `ip` VARCHAR(64),
   `isp` VARCHAR(128),
+  `city` VARCHAR(64),
+  `country` VARCHAR(64),
   `user_agent` TEXT,
+  `screen` VARCHAR(32),
+  `timezone` VARCHAR(64),
+  `language` VARCHAR(32),
+  `platform` VARCHAR(64),
+  `cores` VARCHAR(32),
   `triggered_at` DOUBLE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -63,8 +73,11 @@ CREATE TABLE IF NOT EXISTS `submitted_reports` (
   `incident_id` VARCHAR(32) NOT NULL,
   `stage` VARCHAR(32) NOT NULL,
   `filename` VARCHAR(255) NOT NULL,
-  `ack_number` VARCHAR(64) NOT NULL,
+  `ack_number` VARCHAR(64) NOT NULL UNIQUE,
   `ack_status` VARCHAR(32) NOT NULL,
+  `attacker_ip` VARCHAR(64),
+  `attacker_isp` VARCHAR(128),
+  `detected_at` DOUBLE,
   `submitted_at` DOUBLE NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -74,10 +87,24 @@ CREATE TABLE IF NOT EXISTS `users` (
   `name` VARCHAR(128) NOT NULL,
   `email` VARCHAR(128) NOT NULL UNIQUE,
   `role` VARCHAR(64) DEFAULT 'Analyst',
+  `status` VARCHAR(32) DEFAULT 'Active',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 7. Admin Emergency SMS Notifications
+-- 7. Enterprise Projects
+CREATE TABLE IF NOT EXISTS `projects` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(128) NOT NULL,
+  `client` VARCHAR(128) NOT NULL,
+  `owner` VARCHAR(128) NOT NULL,
+  `deadline` VARCHAR(32),
+  `budget` DECIMAL(12, 2) DEFAULT 0,
+  `progress` INT DEFAULT 0,
+  `status` VARCHAR(32) DEFAULT 'Planning',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 8. Alert Dispatch Audit Log
 CREATE TABLE IF NOT EXISTS `sms_audit` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `recipient` VARCHAR(32) NOT NULL,
@@ -85,10 +112,3 @@ CREATE TABLE IF NOT EXISTS `sms_audit` (
   `status` VARCHAR(32) DEFAULT 'DISPATCHED',
   `sent_at` DOUBLE NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Seed initial team users
-INSERT INTO `users` (`name`, `email`, `role`) VALUES
-('Aditi Rao', 'aditi.rao@trapwire.co.in', 'Security Lead'),
-('Rohan Mehta', 'rohan.mehta@trapwire.co.in', 'Compliance Officer'),
-('Kavya Sharma', 'kavya.s@trapwire.co.in', 'SOC Analyst')
-ON DUPLICATE KEY UPDATE `role`=VALUES(`role`);

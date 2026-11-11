@@ -21,7 +21,8 @@ import requests
 
 DEFAULT_SERVER = "http://127.0.0.1:8080"
 NODE_ID = "PI-HONEYPOT-01"
-LOCATION = "Ground Floor Server Rack (Bidar Node)"
+LOCATION = "Optional Edge Node"
+START_TIME = time.time()
 
 
 def report_threat(server_url: str, port: int, service_name: str, client_ip: str, raw_payload: str = ""):
@@ -82,18 +83,17 @@ def start_bait_listener(server_url: str, port: int, service_name: str, banner: s
 
 
 def send_heartbeat(server_url: str):
-    """Sends periodic health status to TrapWire Hardware Nodes Dashboard tab."""
+    """Sends real runtime health status from the Raspberry Pi host."""
     while True:
         try:
             url = f"{server_url}/api/hardware/heartbeat"
+            elapsed = int(time.time() - START_TIME)
             payload = {
                 "node_id": NODE_ID,
                 "hostname": socket.gethostname(),
                 "status": "ONLINE",
-                "uptime": "24d 11h 04m",
-                "cpu_temp": "42.1°C",
-                "memory_used": "18%",
-                "services": ["Bait-SSH:2222", "Bait-Telnet:2323", "Bait-Modbus:502"]
+                "uptime_seconds": elapsed,
+                "services": ["Bait-SSH:2222", "Bait-Telnet:2323", "Bait-Modbus:5020"]
             }
             requests.post(url, json=payload, timeout=2)
         except Exception:

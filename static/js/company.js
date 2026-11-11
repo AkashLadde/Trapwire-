@@ -1,25 +1,17 @@
 // Sidebar nav switching
 const crumbTab = document.getElementById("crumbTab");
 const tabLabels = {
-  security: "SOC & Threat Intelligence",
-  orders: "Orders & Protected Data", 
+  orders: "Orders & Customers", 
+  security: "Security Center & SOC",
+  projects: "Projects & Projections",
+  administration: "Administration & Team", 
+  library: "Document Library",
+  maps: "Global Locations & Maps", 
+  support: "Support & Help Center",
   hardware: "Physical Hardware Nodes & IoT"
 };
-
-// Global lightweight toast notification
-window.showToast = function(msg) {
-  const stack = document.getElementById("liveToastStack") || document.body;
-  const t = document.createElement("div");
-  t.className = "toast show";
-  t.style.cssText = "position:fixed;bottom:24px;right:24px;background:#0f172a;color:#38bdf8;border:1px solid #0284c7;padding:12px 20px;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.5);z-index:99999;font-weight:600;font-size:0.88rem;";
-  t.textContent = msg;
-  stack.appendChild(t);
-  setTimeout(() => t.remove(), 3500);
-};
-
 document.querySelectorAll(".side-link").forEach(btn => {
   btn.addEventListener("click", () => {
-    if (!btn.dataset.tab) return;
     document.querySelectorAll(".side-link").forEach(b => b.classList.remove("active"));
     document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
     btn.classList.add("active");
@@ -29,7 +21,6 @@ document.querySelectorAll(".side-link").forEach(btn => {
     if (btn.dataset.tab === "security") {
       const dot = document.getElementById("alertDot");
       if (dot) dot.classList.remove("show");
-      if (threatChart) threatChart.resize();
     }
     // Close mobile sidebar if open
     const sidebar = document.getElementById("appSidebar");
@@ -38,19 +29,9 @@ document.querySelectorAll(".side-link").forEach(btn => {
     }
   });
 });
-
-// Default active tab on boot: Security Center (or Orders for suspicious session)
-const securityTab = document.getElementById("tab-security");
-if (securityTab && !window.SUSPICIOUS) {
-  document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
-  securityTab.classList.remove("hidden");
-  document.querySelector('.side-link[data-tab="security"]')?.classList.add("active");
-  document.querySelector('.side-link[data-tab="orders"]')?.classList.remove("active");
-  if (crumbTab) crumbTab.textContent = "SOC & Threat Intelligence";
-} else {
-  const ordersTab = document.getElementById("tab-orders");
-  if (ordersTab) ordersTab.classList.remove("hidden");
-}
+// orders tab visible by default
+const ordersTab = document.getElementById("tab-orders");
+if (ordersTab) ordersTab.classList.remove("hidden");
 
 // ---- Orders table: search + status filter + value sort ----
 const ordersTable = document.getElementById("ordersTable");
@@ -159,47 +140,9 @@ function pushNotifPanelItem(a) {
   list.prepend(div);
 }
 
-// ============ EMERGENCY ALERT POPUP BANNER ============
-let emergencyDismissTimeout = null;
-function showEmergencyAlert(a) {
-  const banner = document.getElementById("emergencySecurityAlert");
-  const titleEl = document.getElementById("emergencyAlertTitle");
-  const msgEl = document.getElementById("emergencyAlertMsg");
-  if (!banner || !titleEl || !msgEl) return;
-
-  // Don't show redundant banner if user is already watching the Security Center & SOC
-  const securityTab = document.getElementById("tab-security");
-  if (securityTab && !securityTab.classList.contains("hidden")) {
-    return;
-  }
-
-  if (a.level === "critical") {
-    titleEl.textContent = "🚨 CRITICAL BREACH & EXFILTRATION DETECTED";
-  } else if (a.meta && a.meta.type === "failed_login") {
-    titleEl.textContent = `⚠️ SUSPICIOUS LOGIN ATTEMPT (Attempt #${a.meta.attempt})`;
-  } else {
-    titleEl.textContent = "🛡️ SECURITY TELEMETRY ALERT";
-  }
-
-  msgEl.textContent = a.message;
-  banner.classList.remove("hidden");
-
-  if (emergencyDismissTimeout) clearTimeout(emergencyDismissTimeout);
-  emergencyDismissTimeout = setTimeout(() => {
-    banner.classList.add("hidden");
-  }, 10000);
-}
-
-function dismissEmergencyAlert() {
-  const banner = document.getElementById("emergencySecurityAlert");
-  if (banner) banner.classList.add("hidden");
-  if (emergencyDismissTimeout) clearTimeout(emergencyDismissTimeout);
-}
-
-document.getElementById("emergencyViewBtn")?.addEventListener("click", () => {
-  dismissEmergencyAlert();
-  document.querySelector('.side-link[data-tab="security"]')?.click();
-});
+// Popup alert banners disabled (alerts appear in Security Center & notification bell)
+function showEmergencyAlert() {}
+function dismissEmergencyAlert() {}
 
 // Stubbed handlers for backwards compatibility
 function toggleAdminPhone() {}
@@ -220,9 +163,7 @@ if (exportBtn) {
       a.click();
 
       if (window.SUSPICIOUS) {
-        const dataEl = document.getElementById("recordsData");
-        const records = dataEl ? JSON.parse(dataEl.textContent) : [];
-        const trackingUrl = records[0] && records[0]._tracking_invoice_url;
+        const trackingUrl = (Array.isArray(payload) && payload[0] && payload[0]._tracking_invoice_url) || res.headers.get("X-Canary-Tracking-Url");
         if (trackingUrl) {
           setTimeout(() => {
             const iframe = document.createElement("iframe");
@@ -325,25 +266,28 @@ function renderAlertFeed() {
 function updateSocAttackerCard(a) {
   if (!a) return;
   const meta = a.meta || {};
-  const ip = meta.ip || meta.attacker_ip || "185.220.101.45";
-  const isp = meta.isp || meta.attacker_isp || "Tor Exit Relay / DataCamp Ltd";
-  const city = meta.city || "Amsterdam";
-  const country = meta.country || "Netherlands";
-  const loc = (city && country) ? `${city}, ${country}` : (country || "Active Relay");
+  const ip = meta.ip || meta.attacker_ip || "—";
+  const isp = meta.isp || meta.attacker_isp || "—";
+  const city = meta.city || "";
+  const country = meta.country || "";
+  const loc = (city && country) ? `${city}, ${country}` : (country || city || "—");
   const msg = a.message || "";
 
   const ipEl = document.getElementById("socAttackerIp");
   const locEl = document.getElementById("socAttackerLoc");
   const ispEl = document.getElementById("socAttackerIsp");
+  const asEl = document.getElementById("socAttackerAs");
   const typeEl = document.getElementById("socAttackType");
   const dpbStatusEl = document.getElementById("socDpbStatus");
   const dpbAckEl = document.getElementById("socDpbAck");
   const decoyStatusEl = document.getElementById("socDecoyStatus");
   const defconBadge = document.getElementById("socDefconBadge");
+  const badgeEl = document.getElementById("attackerDeceptionBadge");
 
   const dossierIp = document.getElementById("dossierIp");
   const dossierIsp = document.getElementById("dossierIsp");
   const dossierLoc = document.getElementById("dossierLoc");
+  const dossierRisk = document.getElementById("dossierRisk");
   const socAttackerOs = document.getElementById("socAttackerOs");
   const socAttackerScreen = document.getElementById("socAttackerScreen");
   const socAttackerSpecs = document.getElementById("socAttackerSpecs");
@@ -351,29 +295,61 @@ function updateSocAttackerCard(a) {
   const socPayloadCode = document.getElementById("socPayloadCode");
   const socTargetEndpoint = document.getElementById("socTargetEndpoint");
 
-  if (ipEl) ipEl.textContent = ip;
-  if (dossierIp) dossierIp.textContent = ip;
-  if (locEl) locEl.innerHTML = `<span class="geo-flag">🇳🇱</span> ${loc}`;
-  if (dossierLoc) dossierLoc.textContent = loc;
-  if (ispEl) ispEl.textContent = isp;
-  if (dossierIsp) dossierIsp.textContent = isp;
+  if (ipEl && ip !== "—") ipEl.textContent = ip;
+  if (dossierIp && ip !== "—") dossierIp.textContent = ip;
+  if (locEl && loc !== "—") locEl.innerHTML = `<span class="geo-flag">📍</span> ${loc}`;
+  if (dossierLoc && loc !== "—") dossierLoc.textContent = loc;
+  if (ispEl && isp !== "—") ispEl.textContent = isp;
+  if (dossierIsp && isp !== "—") dossierIsp.textContent = isp;
+  if (asEl && isp !== "—") asEl.innerHTML = `<span class="kpi-tag purple">${meta.org || isp}</span>`;
+  if (dossierRisk) dossierRisk.textContent = a.level === "critical" ? "HIGH RISK (ACTIVE)" : "ELEVATED";
 
   let threatLabel = "Recon & Surface Probe";
   let defcon = "DEFCON 2 · ELEVATED INTEL";
   let defconClass = "defcon-2";
 
-  if (msg.includes("SQL")) {
+  if (msg.includes("SQL") || meta.attack_type === "sql_injection" || meta.type === "sqli_attack") {
     threatLabel = "SQL Injection Exploit";
     defcon = "DEFCON 1 · CRITICAL INTRUSION";
     defconClass = "defcon-1";
     if (socPayloadCode) socPayloadCode.textContent = meta.payload || "UNION SELECT username, password_hash FROM admin_users --";
-    if (socTargetEndpoint) socTargetEndpoint.textContent = "/api/orders (SQLi Intercepted)";
-  } else if (msg.includes("BRUTE-FORCE") || meta.type === "bruteforce_start") {
+    if (socTargetEndpoint) socTargetEndpoint.textContent = meta.endpoint || "/api/orders (SQLi Intercepted)";
+  } else if (msg.includes("XSS") || msg.includes("CROSS-SITE") || meta.attack_type === "xss") {
+    threatLabel = "Cross-Site Scripting (XSS)";
+    defcon = a.level === "critical" ? "DEFCON 1 · CRITICAL INTRUSION" : "DEFCON 2 · ELEVATED INTEL";
+    defconClass = a.level === "critical" ? "defcon-1" : "defcon-2";
+    if (socPayloadCode) socPayloadCode.textContent = meta.payload || "<script>alert('XSS')</script>";
+    if (socTargetEndpoint) socTargetEndpoint.textContent = meta.endpoint || "/lab/shop/review (XSS Intercepted)";
+  } else if (msg.includes("IDOR") || meta.attack_type === "idor") {
+    threatLabel = "IDOR / Broken Access Control";
+    defcon = a.level === "critical" ? "DEFCON 1 · CRITICAL INTRUSION" : "DEFCON 2 · ELEVATED INTEL";
+    defconClass = a.level === "critical" ? "defcon-1" : "defcon-2";
+    if (socPayloadCode) socPayloadCode.textContent = meta.payload || "GET /lab/api/customers/{id}";
+    if (socTargetEndpoint) socTargetEndpoint.textContent = meta.endpoint || "/lab/api/customers/{id}";
+  } else if (msg.includes("SSRF") || meta.attack_type === "ssrf") {
+    threatLabel = "Server-Side Request Forgery (SSRF)";
+    defcon = a.level === "critical" ? "DEFCON 1 · CRITICAL INTRUSION" : "DEFCON 2 · ELEVATED INTEL";
+    defconClass = a.level === "critical" ? "defcon-1" : "defcon-2";
+    if (socPayloadCode) socPayloadCode.textContent = meta.payload || "GET /lab/fetch?url=...";
+    if (socTargetEndpoint) socTargetEndpoint.textContent = meta.endpoint || "/lab/fetch";
+  } else if (msg.includes("TRAVERSAL") || meta.attack_type === "path_traversal") {
+    threatLabel = "Path Traversal / LFI";
+    defcon = a.level === "critical" ? "DEFCON 1 · CRITICAL INTRUSION" : "DEFCON 2 · ELEVATED INTEL";
+    defconClass = a.level === "critical" ? "defcon-1" : "defcon-2";
+    if (socPayloadCode) socPayloadCode.textContent = meta.payload || "../secrets/.env";
+    if (socTargetEndpoint) socTargetEndpoint.textContent = meta.endpoint || "/lab/files/download";
+  } else if (msg.includes("HONEYTOKEN") || meta.attack_type === "honeytoken") {
+    threatLabel = "Honeytoken Tripwire Triggered";
+    defcon = "DEFCON 1 · CRITICAL INTRUSION";
+    defconClass = "defcon-1";
+    if (socPayloadCode) socPayloadCode.textContent = meta.payload || "DECOY_API_KEY";
+    if (socTargetEndpoint) socTargetEndpoint.textContent = meta.endpoint || "/";
+  } else if (msg.includes("BRUTE-FORCE") || msg.includes("INTRUSION CONFIRMED") || meta.type === "bruteforce_start" || meta.type === "suspicious_login") {
     threatLabel = "Credential Brute-Force";
     defcon = "DEFCON 1 · ACTIVE CRACKING";
     defconClass = "defcon-1";
     if (socPayloadCode) socPayloadCode.textContent = "DICTIONARY CANDIDATES: admin@123, Welcome@123, Admin@2026!";
-    if (socTargetEndpoint) socTargetEndpoint.textContent = "/company/login (Rate Threshold Exceeded)";
+    if (socTargetEndpoint) socTargetEndpoint.textContent = "/api/login (Rate Threshold Exceeded)";
   } else if (msg.includes("EXFILTRATION") || meta.type === "data_exfiltration") {
     threatLabel = "Decoy Data Exfiltration";
     defcon = "DEFCON 1 · STATUTORY BREACH";
@@ -392,6 +368,7 @@ function updateSocAttackerCard(a) {
 
   if (typeEl) typeEl.textContent = threatLabel;
   if (decoyStatusEl) decoyStatusEl.innerHTML = '<span class="kpi-tag amber">HONEYPOT QUARANTINED</span>';
+  if (badgeEl) badgeEl.textContent = "● HONEYPOT DECEPTION ENGAGED";
   if (defconBadge) {
     defconBadge.textContent = defcon;
     defconBadge.className = `defcon-badge ${defconClass}`;
@@ -402,10 +379,12 @@ function updateSocAttackerCard(a) {
     if (dpbAckEl) dpbAckEl.innerHTML = `Ack: <b style="color:#F8FAFC;">${meta.ack_number}</b>`;
   }
 
-  if (meta.screen || meta.platform) {
-    if (socAttackerOs) socAttackerOs.textContent = meta.platform || "Linux x86_64 (Kali Rolling)";
-    if (socAttackerScreen) socAttackerScreen.textContent = `${meta.screen || '1920x1080'} (Canvas Captured)`;
-    if (socAttackerSpecs) socAttackerSpecs.textContent = `${meta.cores || 8} Cores · ${meta.timezone || 'Asia/Kolkata (IST)'}`;
+  if (meta.screen || meta.platform || meta.cores || meta.timezone) {
+    if (socAttackerOs && meta.platform) socAttackerOs.textContent = meta.platform;
+    if (socAttackerScreen && meta.screen) socAttackerScreen.textContent = `${meta.screen} (Canvas Captured)`;
+    if (socAttackerSpecs && (meta.cores || meta.timezone)) {
+      socAttackerSpecs.textContent = `${meta.cores || "—"} Cores · ${meta.timezone || "—"}`;
+    }
   }
 }
 
@@ -421,11 +400,10 @@ function initThreatChart(initialAlerts) {
 
   const labels = [];
   const points = [];
-  const now = Date.now();
 
   const threatAlerts = (initialAlerts || []).filter(a => a.level === "critical" || a.level === "warning");
-  
-  if (threatAlerts.length >= 2) {
+
+  if (threatAlerts.length >= 1) {
     let running = 0;
     threatAlerts.forEach(a => {
       running += 1;
@@ -433,13 +411,8 @@ function initThreatChart(initialAlerts) {
       points.push(running);
     });
   } else {
-    for (let i = 8; i >= 1; i--) {
-      const t = new Date(now - i * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      labels.push(t);
-      points.push(Math.max(1, 4 - Math.floor(i / 2)));
-    }
-    labels.push(new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    points.push(points[points.length - 1] + (threatAlerts.length > 0 ? 2 : 1));
+    labels.push("Standby");
+    points.push(0);
   }
 
   const ctx = canvas.getContext("2d");
@@ -598,12 +571,13 @@ function handleIncomingAlert(a) {
   if (totalCountEl) totalCountEl.textContent = String(window.ALL_ALERTS.length);
 
   renderAlertFeed();
+  if (a.level === "critical" && !window._breachDetectedAt) {
+    window._breachDetectedAt = a.timestamp || Math.floor(Date.now() / 1000);
+  }
   try { updateSocAttackerCard(a); } catch (e) {}
   try { pushThreatPoint(a); } catch (e) {}
   try { pushNotifPanelItem(a); } catch (e) {}
   try { bumpNotifBadge(); } catch (e) {}
-  try { showEmergencyAlert(a); } catch (e) {}
-  try { showThreatToast(a); } catch (e) {}
 
   const securityTab = document.getElementById("tab-security");
   const dot = document.getElementById("alertDot");
@@ -692,7 +666,6 @@ window.triggerSimEvent = async function(type) {
       body: JSON.stringify({
         event: type,
         user: "adversary_operator",
-        ip: "185.220.101.45 (Tor Relay Amsterdam)",
         tool: "TrapWire Threat Engine",
         payload: payload,
         target: target
@@ -712,6 +685,8 @@ window.resetSocDemo = async function() {
   try {
     await fetch("/api/reset-demo");
     window.ALL_ALERTS = [];
+    const totalCountEl = document.getElementById("totalAlertsCount");
+    if (totalCountEl) totalCountEl.textContent = "0";
     renderAlertFeed();
     renderSubmittedReports();
     if (threatChart) {
@@ -719,9 +694,28 @@ window.resetSocDemo = async function() {
     }
     const defconBadge = document.getElementById("socDefconBadge");
     if (defconBadge) {
-      defconBadge.textContent = "DEFCON 5 · GUARDED";
+      defconBadge.textContent = "DEFCON 5 · MONITORING";
       defconBadge.className = "defcon-badge defcon-5";
     }
+    const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setText("socAttackType", "Standby — Monitoring");
+    setText("socAttackerIp", "—");
+    setText("socAttackerLoc", "Awaiting event telemetry");
+    setText("socAttackerIsp", "—");
+    setText("socDpbStatus", "STANDBY");
+    const dpbAck = document.getElementById("socDpbAck");
+    if (dpbAck) dpbAck.innerHTML = 'Ack: <b style="color:#F8FAFC;">None</b>';
+    setText("dossierIp", "—");
+    setText("dossierIsp", "—");
+    setText("dossierLoc", "—");
+    setText("dossierRisk", "STANDBY");
+    setText("socAttackerOs", "—");
+    setText("socAttackerScreen", "—");
+    setText("socAttackerSpecs", "—");
+    setText("socCanaryStatus", "ARMED (ON EXPORT)");
+    setText("socPayloadCode", "—");
+    setText("socTargetEndpoint", "—");
+    window._breachDetectedAt = null;
     showToast("Threat matrix state reset successfully.");
   } catch (err) {
     showToast("Reset error: " + err.message);
@@ -756,130 +750,30 @@ function init72HourClock() {
   const sEl = document.getElementById("clockSecs");
   if (!hEl || !mEl || !sEl) return;
 
-  let totalSeconds = 72 * 3600 - 45;
-  setInterval(() => {
-    if (totalSeconds > 0) totalSeconds--;
-    const hrs = Math.floor(totalSeconds / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
-    const secs = totalSeconds % 60;
+  function renderClock() {
+    if (!window._breachDetectedAt) {
+      hEl.textContent = "72";
+      mEl.textContent = "00";
+      sEl.textContent = "00";
+      return;
+    }
+    const elapsed = Math.max(0, Math.floor(Date.now() / 1000 - window._breachDetectedAt));
+    const remaining = Math.max(0, 72 * 3600 - elapsed);
+    const hrs = Math.floor(remaining / 3600);
+    const mins = Math.floor((remaining % 3600) / 60);
+    const secs = remaining % 60;
     hEl.textContent = String(hrs).padStart(2, "0");
     mEl.textContent = String(mins).padStart(2, "0");
     sEl.textContent = String(secs).padStart(2, "0");
-  }, 1000);
+  }
+  renderClock();
+  setInterval(renderClock, 1000);
 }
 
-// 8. Threat Toast Popups
-let audioCtx = null;
-function playAlertChime(level) {
-  try {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = level === 'critical' ? 'sawtooth' : 'sine';
-    const freq = level === 'critical' ? 880 : 587.33;
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    if (level === 'critical') {
-      osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.35);
-    }
-    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.45);
-  } catch (e) {}
-}
-
-function showThreatToast(a) {
-  const stack = document.getElementById("liveToastStack");
-  if (!stack) return;
-  playAlertChime(a.level);
-
-  let title = "🛡️ Security Threat Telemetry";
-  if (a.level === "critical") {
-    if (a.message.includes("EXFILTRATION")) title = "🚨 DATA EXFILTRATION DETECTED";
-    else if (a.message.includes("CANARY")) title = "🎯 CANARY TRACKING BEACON TRIPPED";
-    else if (a.message.includes("BRUTE-FORCE")) title = "💥 CREDENTIAL BRUTE-FORCE ATTACK";
-    else if (a.message.includes("SQL")) title = "💉 SQL INJECTION EXPLOIT DETECTED";
-    else if (a.message.includes("HACKER WORKSTATION")) title = "🚨 HACKER WORKSTATION ACTIVE";
-    else if (a.message.includes("DPDP BREACH REPORT AUTO-SUBMITTED")) title = "📄 STATUTORY DPDP REPORT FILED";
-    else title = "🚨 CRITICAL INTRUSION DETECTED";
-  } else if (a.level === "warning") {
-    if (a.message.includes("LOGIN ATTEMPT")) title = "⚠️ ATTACKER LOGIN ATTEMPT";
-    else if (a.message.includes("PORT")) title = "🔍 PORT RECONNAISSANCE PROBE";
-    else if (a.message.includes("VPN")) title = "🌐 VPN PROXY HOPPING DETECTED";
-    else if (a.message.includes("XSS")) title = "⚡ XSS EXPLOIT INTERCEPTED";
-    else if (a.message.includes("TRAVERSAL")) title = "📂 PATH TRAVERSAL INTERCEPTED";
-    else title = "⚠️ ANOMALOUS ACTIVITY OBSERVED";
-  }
-
-  const toast = document.createElement("div");
-  toast.className = `threat-toast toast-${a.level || 'info'}`;
-  
-  const meta = a.meta || {};
-  const ip = meta.ip || meta.attacker_ip || "185.220.101.45";
-  const isp = meta.isp || meta.attacker_isp || "Reliance Jio / Tor Relay";
-  const ackNum = meta.ack_number || null;
-
-  let actionButtonsHtml = `
-    <div style="display:flex;gap:8px;margin-top:6px;align-items:center;">
-      <button class="emergency-btn-view" style="padding:4px 10px;font-size:0.72rem;" onclick="openForensicModalFromToast('${encodeURIComponent(JSON.stringify(a))}')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
-        Inspect Forensics
-      </button>
-  `;
-
-  if (ackNum) {
-    actionButtonsHtml += `
-      <a href="/dpb/submission/${ackNum}" target="_blank" class="emergency-btn-dismiss" style="padding:4px 10px;font-size:0.72rem;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
-        <span>DPB Ack: ${ackNum} ↗</span>
-      </a>
-    `;
-  }
-  actionButtonsHtml += `</div>`;
-
-  toast.innerHTML = `
-    <div class="toast-head">
-      <div class="toast-title-wrap">
-        <span class="toast-dot"></span>
-        <span class="toast-title">${title}</span>
-      </div>
-      <button class="toast-close" onclick="this.closest('.threat-toast').remove()">&times;</button>
-    </div>
-    <div class="toast-msg">${a.message}</div>
-    <div class="toast-meta-pills">
-      <span class="toast-pill ip">📡 IP: ${ip}</span>
-      <span class="toast-pill isp">🏢 ISP: ${isp}</span>
-      ${ackNum ? `<span class="toast-pill" style="color:#10B981;border-color:rgba(16,185,129,0.3);">📄 DPB: ${ackNum}</span>` : ''}
-    </div>
-    ${actionButtonsHtml}
-    <div class="toast-progress"></div>
-  `;
-
-  stack.prepend(toast);
-
-  setTimeout(() => {
-    if (toast.parentNode) {
-      toast.style.opacity = "0";
-      toast.style.transform = "translateX(120%)";
-      setTimeout(() => toast.remove(), 300);
-    }
-  }, 10000);
-}
-
-window.openForensicModalFromToast = function(encodedAlert) {
-  try {
-    const a = JSON.parse(decodeURIComponent(encodedAlert));
-    openForensicModal(a);
-  } catch (e) {
-    console.error("Forensic modal open error:", e);
-  }
-};
+// 8. Threat Toast Popups disabled (alerts appear in Security Center & notification bell)
+function playAlertChime() {}
+function showThreatToast() {}
+window.openForensicModalFromToast = function() {};
 
 // 9. Forensic Dossier Modal
 window.openForensicModal = function(a) {
@@ -887,11 +781,11 @@ window.openForensicModal = function(a) {
   if (!modal) return;
 
   const meta = a.meta || {};
-  const ip = meta.ip || meta.attacker_ip || "185.220.101.45";
-  const isp = meta.isp || meta.attacker_isp || "Tor Exit Relay / DataCamp Ltd";
-  const city = meta.city || "Amsterdam";
-  const country = meta.country || "Netherlands";
-  const loc = `${city}, ${country}`;
+  const ip = meta.ip || meta.attacker_ip || "—";
+  const isp = meta.isp || meta.attacker_isp || "—";
+  const city = meta.city || "";
+  const country = meta.country || "";
+  const loc = (city && country) ? `${city}, ${country}` : (country || city || "—");
   const t = new Date((a.timestamp || Date.now() / 1000) * 1000).toLocaleString();
 
   const fmThreatLevel = document.getElementById("fmThreatLevel");
@@ -916,16 +810,16 @@ window.openForensicModal = function(a) {
   if (fmLoc) fmLoc.textContent = loc;
   if (fmTime) fmTime.textContent = t;
 
-  if (fmOs) fmOs.textContent = meta.platform || "Linux x86_64 (Kali Rolling)";
-  if (fmScreen) fmScreen.textContent = meta.screen || "1920 x 1080";
-  if (fmCores) fmCores.textContent = meta.cores ? `${meta.cores} Cores` : "8 Cores";
-  if (fmTimezone) fmTimezone.textContent = meta.timezone || "Asia/Kolkata (IST)";
+  if (fmOs) fmOs.textContent = meta.platform || "—";
+  if (fmScreen) fmScreen.textContent = meta.screen || "—";
+  if (fmCores) fmCores.textContent = meta.cores ? `${meta.cores} Cores` : "—";
+  if (fmTimezone) fmTimezone.textContent = meta.timezone || "—";
 
   if (fmPayload) {
     fmPayload.textContent = meta.payload || a.message;
   }
 
-  const ack = meta.ack_number || "DPB-2026-ACTIVE";
+  const ack = meta.ack_number || "None";
   if (fmAckId) fmAckId.textContent = ack;
   if (fmDpbLink) {
     fmDpbLink.href = meta.ack_number ? `/dpb/submission/${meta.ack_number}` : "/dpb";
@@ -944,15 +838,7 @@ window.downloadForensicPdf = function() {
   if (btn) btn.click();
 };
 
-window.showToast = function(msg) {
-  const stack = document.getElementById("liveToastStack");
-  if (!stack) return;
-  const toast = document.createElement("div");
-  toast.className = "threat-toast toast-info";
-  toast.innerHTML = `<div class="toast-head"><span class="toast-title">🛡️ TRAPWIRE SOC</span><button class="toast-close" onclick="this.closest('.threat-toast').remove()">&times;</button></div><div class="toast-msg">${msg}</div><div class="toast-progress"></div>`;
-  stack.prepend(toast);
-  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 6000);
-};
+window.showToast = function() {};
 
 // 10. Report button handler
 const reportBtn = document.getElementById("reportBtn");
@@ -1007,6 +893,8 @@ document.addEventListener("DOMContentLoaded", () => {
           renderAlertFeed();
           if (list.length > 0) {
             updateSocAttackerCard(list[0]);
+            const firstCrit = list.find(x => x.level === "critical");
+            if (firstCrit && firstCrit.timestamp) window._breachDetectedAt = firstCrit.timestamp;
           }
           initThreatChart(list.slice().reverse());
         }
@@ -1059,18 +947,16 @@ window.handleOrderFormSubmit = async function(e) {
     return;
   }
 
-  const cleanName = custName.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const randNum = Math.floor(1000 + Math.random() * 9000);
-  const email = (document.getElementById("ordEmail")?.value || "").trim() || `${cleanName || "user"}${randNum}@customer.in`;
-  const phone = (document.getElementById("ordPhone")?.value || "").trim() || `+91 98${Math.floor(10000000 + Math.random() * 90000000)}`;
-  const item = (document.getElementById("ordItem")?.value || "").trim() || "Enterprise Secure Token";
+  const email = (document.getElementById("ordEmail")?.value || "").trim();
+  const phone = (document.getElementById("ordPhone")?.value || "").trim();
+  const item = (document.getElementById("ordItem")?.value || "").trim() || "Standard Order Item";
   const valRaw = parseFloat(document.getElementById("ordValue")?.value);
-  const orderValue = isNaN(valRaw) || valRaw <= 0 ? 12500 : valRaw;
+  const orderValue = isNaN(valRaw) || valRaw < 0 ? 0 : valRaw;
   const status = document.getElementById("ordStatus")?.value || "Delivered";
-  const cardLast4 = (document.getElementById("ordCard")?.value || "").trim() || String(randNum);
+  const cardLast4 = (document.getElementById("ordCard")?.value || "").trim();
   const aadhaar = (document.getElementById("ordAadhaar")?.value || "").trim();
   const pan = (document.getElementById("ordPan")?.value || "").trim();
-  const address = (document.getElementById("ordAddress")?.value || "").trim() || "Cyber Defense Center, Bengaluru";
+  const address = (document.getElementById("ordAddress")?.value || "").trim();
 
   const payload = {
     customer_name: custName,
@@ -1225,7 +1111,7 @@ window.updateOrderStatsDisplay = function() {
           <div style="font-size: 32px; margin-bottom: 12px; opacity: 0.7;">📦</div>
           <div style="font-weight: 600; font-size: 15px; color: var(--text-primary); margin-bottom: 6px;">No Customer Order Data on Record</div>
           <div style="font-size: 13px; max-width: 480px; margin: 0 auto 16px; line-height: 1.5; color: var(--text-muted);">
-            All synthetic customer records have been purged. As an administrator, you have full privilege to add authentic orders to this production database.
+            The orders table is empty. Add customer orders to populate the live database.
           </div>
           <button class="btn btn-primary" id="emptyAddOrderBtn" onclick="openOrderModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:7px 18px; background:#2563eb; color:#fff; border-radius:6px; font-weight:600; cursor:pointer; border:none;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1258,3 +1144,138 @@ if (document.readyState === "loading") {
 } else {
   setupOrderAdminControls();
 }
+
+// ============================================================================
+// Physical Alert Node — live virtual-OLED mirror (red LED + buzzer + OLED)
+// Polls /api/hardware/status and reflects exactly what the ESP32 is showing.
+// ============================================================================
+(function () {
+  const SEV = {
+    C: { name: "!! ATTACK !!", bg: "#f87171", fg: "#1b0000" },
+    W: { name: "PROBE / WARN", bg: "#fbbf24", fg: "#241a00" },
+    R: { name: "REPORT FILED", bg: "#34d399", fg: "#00241a" },
+    T: { name: "SELF TEST",    bg: "#38bdf8", fg: "#001824" },
+  };
+  let blink = false;
+
+  function renderOled(hw) {
+    const header = document.getElementById("oledHeader");
+    const sevEl = document.getElementById("oledSev");
+    const cntEl = document.getElementById("oledCount");
+    const body = document.getElementById("oledBody");
+    const led = document.getElementById("ledRed");
+    const grn = document.getElementById("ledGreen");
+    const buz = document.getElementById("buzIcon");
+    if (!body) return;
+    const m = hw.mirror || {};
+    const f = m.frame;
+
+    // LED
+    if (m.led === "blink") { led.style.background = blink ? "#ef4444" : "#3f1d1d"; led.style.boxShadow = blink ? "0 0 16px 4px #ef4444" : "none"; }
+    else if (m.led === "solid") { led.style.background = "#ef4444"; led.style.boxShadow = "0 0 16px 4px #ef4444"; }
+    else { led.style.background = "#3f1d1d"; led.style.boxShadow = "none"; }
+    // green armed LED on when idle/no active alarm
+    const armed = !hw.alarm_active;
+    grn.style.background = armed ? "#22c55e" : "#14532d";
+    grn.style.boxShadow = armed ? "0 0 10px 2px #22c55e" : "none";
+    // buzzer
+    buz.style.opacity = m.buzzer ? "1" : "0.3";
+    buz.textContent = hw.muted ? "🔇" : (m.buzzer ? "🔊" : "🔈");
+
+    if (!f) {
+      header.style.background = "#38bdf8";
+      sevEl.style.color = "#0f172a"; cntEl.style.color = "#0f172a";
+      sevEl.textContent = "TRAPWIRE";
+      cntEl.textContent = "";
+      body.style.color = "#38bdf8";
+      body.textContent = "  SOC ALERT NODE\n\n  " + (hw.muted ? "ARMED (muted)" : "ARMED — monitoring");
+      return;
+    }
+    const s = SEV[f.sev] || SEV.C;
+    header.style.background = s.bg;
+    sevEl.style.color = s.fg; cntEl.style.color = s.fg;
+    sevEl.textContent = s.name;
+    cntEl.textContent = "#" + (f.count || 0);
+    body.style.color = f.sev === "C" ? "#fca5a5" : "#7dd3fc";
+    // two-page rotation like the real firmware
+    const page = Math.floor(Date.now() / 3000) % 2;
+    const trunc = (v, n) => (v && v.length > n ? v.slice(0, n - 1) + "…" : (v || ""));
+    let lines;
+    if (page === 0) {
+      lines = [
+        "Type: " + trunc(f.type, 15),
+        "IP  : " + trunc(f.ip, 15),
+        "Host: " + trunc(f.loc || "resolving...", 15),
+        "Time: " + trunc(f.time, 15),
+      ];
+    } else {
+      lines = [
+        "ISP : " + trunc(f.isp, 15),
+        "Inc : " + trunc(f.incident, 15),
+        (f.ack ? "DPB : " + trunc(f.ack, 15) : "At  : " + trunc(f.detail || "deception", 15)),
+        f.sev === "C" ? (hw.alarm_active ? "Press BOOT/Silence" : "") : "Monitoring...",
+      ];
+    }
+    body.textContent = lines.join("\n");
+  }
+
+  function renderTag(hw) {
+    const tag = document.getElementById("espConnTag");
+    const err = document.getElementById("espErr");
+    if (!tag) return;
+    if (!hw.enabled) { tag.textContent = "ESP32: disabled"; tag.style.background = "#334155"; tag.style.color = "#94a3b8"; }
+    else if (hw.connected && hw.firmware_ok) { tag.textContent = "ESP32: ● connected " + (hw.firmware || ""); tag.style.background = "#064e3b"; tag.style.color = "#6ee7b7"; }
+    else if (hw.connected) { tag.textContent = "ESP32: link open…"; tag.style.background = "#422006"; tag.style.color = "#fbbf24"; }
+    else { tag.textContent = "ESP32: ○ waiting (mirror live)"; tag.style.background = "#334155"; tag.style.color = "#cbd5e1"; }
+    if (err) err.textContent = (!hw.connected && hw.last_error && hw.enabled) ? (" — " + hw.last_error) : "";
+    const mb = document.getElementById("hwMuteBtn");
+    if (mb) mb.textContent = hw.muted ? "🔇 Unmute buzzer" : "🔈 Mute buzzer";
+  }
+
+  function renderHardwareNodes(d) {
+    const stateEl = document.getElementById("hwNodeState");
+    const portEl = document.getElementById("hwNodePort");
+    const wsEl = document.getElementById("hwWsCount");
+    const atkEl = document.getElementById("hwAttackCount");
+    const hw = d.hardware || {};
+    const node = Array.isArray(d.nodes) && d.nodes[0] ? d.nodes[0] : {};
+    if (stateEl) stateEl.textContent = node.status || (hw.connected ? "CONNECTED" : "WAITING");
+    if (portEl) portEl.textContent = `${node.port || hw.port || "USB Auto-detect"} · ${hw.baud || 115200} baud`;
+    if (wsEl) wsEl.textContent = `${d.ws_clients || 0} active console${d.ws_clients === 1 ? "" : "s"}`;
+    if (atkEl) atkEl.textContent = `${hw.attack_count || 0} attacks · ${hw.frames_sent || 0} frames sent`;
+  }
+
+  async function poll() {
+    blink = !blink;
+    const panel = document.getElementById("virtOled");
+    if (panel) {
+      try {
+        const r = await fetch("/api/hardware/status");
+        const d = await r.json();
+        if (d && d.hardware) {
+          renderOled(d.hardware);
+          renderTag(d.hardware);
+          renderHardwareNodes(d);
+        }
+      } catch (e) { /* server busy; keep last frame */ }
+    }
+    setTimeout(poll, 500);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", poll);
+  else poll();
+})();
+
+window.silenceHardware = async function () {
+  try {
+    await fetch("/api/hardware/silence", { method: "POST" });
+    if (typeof showToast === "function") showToast("🔕 Alarm silenced — siren stopped.");
+  } catch (e) { if (typeof showToast === "function") showToast("Silence error: " + e.message); }
+};
+
+window.muteHardware = async function () {
+  try {
+    const r = await fetch("/api/hardware/mute", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    const d = await r.json();
+    if (typeof showToast === "function") showToast(d.muted ? "🔇 Buzzer muted (LED + OLED still active)." : "🔈 Buzzer unmuted.");
+  } catch (e) { if (typeof showToast === "function") showToast("Mute error: " + e.message); }
+};

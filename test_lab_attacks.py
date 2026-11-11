@@ -1,7 +1,7 @@
 """
 TRAPWIRE Phase 2 — Real-Attack Lab Verification Suite
 ======================================================
-Run the defender first:   python run_servers.py   (or uvicorn app.main:app --port 8000)
+Run the defender first:   python run_servers.py   (or uvicorn app.main:app --port 8080)
 Then:                     python test_lab_attacks.py
 
 Every test fires a REAL request at the lab endpoints (the same requests

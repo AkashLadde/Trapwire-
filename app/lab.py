@@ -89,10 +89,10 @@ SANDBOX_ROOT = BASE_DIR / "lab_sandbox"
 SANDBOX_PUBLIC = SANDBOX_ROOT / "public"
 SANDBOX_SECRETS = SANDBOX_ROOT / "secrets"
 
-# Obvious decoys. If this exact string ever shows up in a request, someone
-# read the decoy .env — that is the honeytoken tripwire.
-DECOY_API_KEY = "<redacted>"
-DECOY_AWS_KEY = "AKIADECOYTRAPWIRE000"
+# [SYNTHETIC DECOY LAB DATA] Obvious decoys. If this exact string ever shows up
+# in a request, someone read the decoy .env — that is the honeytoken tripwire.
+DECOY_API_KEY = "TRAPWIRE-DECOY-API-KEY-DO-NOT-USE"
+DECOY_AWS_KEY = "DECOY_AWS_KEY_0000"
 
 router = APIRouter()
 
@@ -263,6 +263,34 @@ STATS: dict[str, dict[str, int]] = {}
 # IDOR enumeration tracking: ip -> {customer_id: first_seen_ts}
 _idor_seen: dict[str, dict[int, float]] = {}
 
+# Defender dashboard / polling / static / lab endpoints that must never be
+# misclassified by the passive middleware inspector.
+_SKIP_INSPECT_PREFIXES = (
+    "/static",
+    "/lab",
+    "/ws",
+    "/api/hardware",
+    "/api/alerts",
+    "/api/submitted-reports",
+    "/api/orders",
+    "/api/users",
+    "/api/projects",
+    "/api/report",
+    "/api/reset-demo",
+    "/api/logout",
+    "/company",
+    "/dpb",
+    "/favicon.ico",
+)
+
+
+def reset_detection_state():
+    """Clear lab in-memory counters, IDOR tracking, and throttle caches."""
+    STATS.clear()
+    _idor_seen.clear()
+    _last_alert.clear()
+    _last_report.clear()
+
 
 def _bump(attack_type: str, confirmed: bool):
     s = STATS.setdefault(attack_type, {"probes": 0, "confirmed": 0})
@@ -305,12 +333,12 @@ async def emit(attack_type: str, ip: str, endpoint: str, payload: str = "",
         msg = (f"{icon} {label} PROBE DETECTED (server-side): suspicious payload from "
                f"{ip} at {endpoint}: `{snippet}` — request served by decoy lab layer, "
                f"real data untouched.")
-        level = "critical"
+        level = "warning"
 
     alert = state.new_alert(msg, level=level, meta={
         "source": "trapwire-lab",
         "detection": "server-side",
-        "attack_type": label,
+        "attack_type": attack_type,
         "confirmed": confirmed,
         "ip": ip,
         "endpoint": endpoint,
@@ -345,16 +373,22 @@ async def emit(attack_type: str, ip: str, endpoint: str, payload: str = "",
 
 
 async def inspect_http_request(request: Request):
-    """Middleware hook (wired in app.main): inspect every real request's
-    path + query string. This is what catches an attacker who uses curl /
-    Burp / sqlmap directly against ANY endpoint — no console involved."""
+    """Middleware hook (wired in app.main): inspect attacker-facing requests
+    (path + query string). Skips defender polling, static assets, and
+    authenticated non-suspicious admin sessions to prevent false positives."""
     try:
         path = request.url.path
-        if path.startswith(("/static", "/lab", "/ws")):
+        if path == "/" or path.startswith(_SKIP_INSPECT_PREFIXES):
             return
+        try:
+            sess = request.session
+            if sess.get("authenticated") and not sess.get("suspicious"):
+                return
+        except Exception:
+            pass
         raw = unquote(str(request.url.query or ""))
         haystack = unquote(path) + "?" + raw
-        ip = request.client.host if request.client else "127.0.0.1"
+        ip = _client_ip(request)
 
         # Honeytoken tripwire: the planted decoy key appearing anywhere.
         auth = request.headers.get("authorization", "")
@@ -371,20 +405,7 @@ async def inspect_http_request(request: Request):
 
 
 def _client_ip(request: Request) -> str:
-    # 1. Forwarded headers (proxies, VPN, etc.)
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.strip()
-    atk_hdr = request.headers.get("x-attacker-ip")
-    if atk_hdr:
-        return atk_hdr.strip()
-    host = request.client.host if request.client else "127.0.0.1"
-    if host in ("127.0.0.1", "localhost", "::1", "unknown"):
-        return "185.20.209.0"
-    return host
+    return request.client.host if request.client else "127.0.0.1"
 
 
 # --------------------------------------------------------------------------
@@ -429,9 +450,6 @@ async def lab_product_by_id(request: Request, id: str = "1"):
     """DELIBERATELY VULNERABLE: `id` is concatenated straight into SQL.
     Runs ONLY against honeypot_lab.db (decoy data)."""
     ip = _client_ip(request)
-    for t in inspect_text(id):
-        if t == "sql_injection":
-            await emit("sql_injection", ip, "/lab/shop/product", payload=id)
     query = ("SELECT id, name, price, description FROM lab_products "
              f"WHERE id = {id}")  # <-- the vulnerability (decoy DB only)
     conn = _lab_conn()
@@ -442,11 +460,14 @@ async def lab_product_by_id(request: Request, id: str = "1"):
         rows, error = [], str(e)
     finally:
         conn.close()
-    # CONFIRMED when a UNION payload actually pulled decoy user rows out.
+    # CONFIRMED when a UNION payload actually pulled decoy user rows out;
+    # otherwise emit a single probe alert if SQLi patterns matched.
     if "union" in id.lower() and rows and any("DECOY-" in str(r) for r in rows):
         await emit("sql_injection", ip, "/lab/shop/product", payload=id,
                    confirmed=True,
                    detail="UNION extraction returned decoy lab_users rows.")
+    elif "sql_injection" in inspect_text(id):
+        await emit("sql_injection", ip, "/lab/shop/product", payload=id, confirmed=False)
     return JSONResponse({"executed_query": query, "results": rows, "error": error})
 
 
@@ -454,9 +475,6 @@ async def lab_product_by_id(request: Request, id: str = "1"):
 async def lab_search(request: Request, q: str = ""):
     """DELIBERATELY VULNERABLE: `q` is concatenated into a LIKE query."""
     ip = _client_ip(request)
-    for t in inspect_text(q):
-        if t == "sql_injection":
-            await emit("sql_injection", ip, "/lab/shop/search", payload=q)
     query = ("SELECT id, name, price, description FROM lab_products "
              f"WHERE name LIKE '%{q}%'")  # <-- the vulnerability (decoy DB only)
     conn = _lab_conn()
@@ -471,6 +489,8 @@ async def lab_search(request: Request, q: str = ""):
         await emit("sql_injection", ip, "/lab/shop/search", payload=q,
                    confirmed=True,
                    detail="UNION extraction returned decoy lab_users rows.")
+    elif "sql_injection" in inspect_text(q):
+        await emit("sql_injection", ip, "/lab/shop/search", payload=q, confirmed=False)
     return JSONResponse({"executed_query": query, "results": rows, "error": error})
 
 
@@ -482,10 +502,15 @@ async def lab_add_review(request: Request):
     stored-XSS vulnerability. Reviews live only in the decoy lab DB."""
     try:
         body = await request.json()
+        if not isinstance(body, dict):
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
     except Exception:
         form = await request.form()
         body = dict(form)
-    product_id = int(body.get("product_id", 1))
+    try:
+        product_id = int(body.get("product_id", 1))
+    except (TypeError, ValueError):
+        return JSONResponse({"error": "product_id must be an integer"}, status_code=400)
     author = str(body.get("author", "anonymous"))
     comment = str(body.get("comment", ""))
     ip = _client_ip(request)
@@ -596,9 +621,7 @@ async def lab_download(request: Request, name: str = "readme.txt"):
     decoded = unquote(name)
     target = Path(os.path.normpath(os.path.join(str(SANDBOX_PUBLIC), decoded)))
     root = SANDBOX_ROOT.resolve()
-
-    if "path_traversal" in inspect_text(decoded) or ".." in decoded:
-        await emit("path_traversal", ip, "/lab/files/download", payload=name)
+    traversal_hint = "path_traversal" in inspect_text(decoded) or ".." in decoded
 
     try:
         target.resolve().relative_to(root)
@@ -610,6 +633,8 @@ async def lab_download(request: Request, name: str = "readme.txt"):
                             status_code=403)
 
     if not target.is_file():
+        if traversal_hint:
+            await emit("path_traversal", ip, "/lab/files/download", payload=name, confirmed=False)
         return JSONResponse({"error": "file not found in decoy lab"}, status_code=404)
 
     content = target.read_text(errors="replace")
@@ -618,6 +643,8 @@ async def lab_download(request: Request, name: str = "readme.txt"):
                    confirmed=True,
                    detail="Decoy secret file served via traversal; it contains only "
                           "planted honeytokens, which are now burned.")
+    elif traversal_hint:
+        await emit("path_traversal", ip, "/lab/files/download", payload=name, confirmed=False)
     return PlainTextResponse(content)
 
 
@@ -653,8 +680,6 @@ async def lab_fetch(request: Request, url: str = ""):
     suspicious = bool(inspect_text(url)) and (
         "169.254" in url or "metadata" in url.lower()
         or host in ("localhost", "127.0.0.1", "0.0.0.0", "::1"))
-    if suspicious:
-        await emit("ssrf", ip, "/lab/fetch", payload=url)
 
     allowed = (
         parsed.scheme == "http"
@@ -663,6 +688,8 @@ async def lab_fetch(request: Request, url: str = ""):
         and parsed.path.startswith("/lab/internal/")
     )
     if not allowed:
+        if suspicious:
+            await emit("ssrf", ip, "/lab/fetch", payload=url, confirmed=False)
         return JSONResponse({
             "error": "blocked by lab SSRF allow-list",
             "allowed_targets": f"http://127.0.0.1:{own_port}/lab/internal/* only",
@@ -698,10 +725,7 @@ def lab_stats():
 @router.post("/lab/reset")
 def lab_reset():
     """Restore the lab to a clean demo state."""
-    STATS.clear()
-    _idor_seen.clear()
-    _last_alert.clear()
-    _last_report.clear()
+    reset_detection_state()
     if LAB_DB_PATH.exists():
         LAB_DB_PATH.unlink()
     init_lab_db()

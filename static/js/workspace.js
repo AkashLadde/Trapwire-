@@ -1,7 +1,7 @@
 // ===================================================================
 // Workspace extension JS — Projects, Administration,
 // Library (Knowledge Base & Interactive Reader), Maps, Support tabs.
-// Purely front-end (localStorage-backed); does not corrupt backend DB.
+// Backed by live /api/projects, /api/users, and /api/orders APIs.
 // ===================================================================
 
 function showToast(message) {
@@ -17,163 +17,249 @@ function openModal(id) { document.getElementById(id)?.classList.remove("hidden")
 function closeModal(id) { document.getElementById(id)?.classList.add("hidden"); }
 
 // ---------------------------------------------------------------
-// PROJECTS TAB
+// PROJECTS TAB (database-backed via /api/projects)
 // ---------------------------------------------------------------
-const FINANCE_LABELS = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
-const FINANCE_ACTUAL = [42, 46, 44, 51, 55, 58, null, null, null, null, null, null]; // in lakhs, actuals so far
-const FINANCE_PROJECTED = [null, null, null, null, null, 58, 63, 67, 72, 76, 81, 88];
-
 let financeChart = null;
-function initFinanceChart() {
+async function initFinanceChart() {
   const canvas = document.getElementById("financeChart");
   if (!canvas || typeof Chart === "undefined") return;
+  let ordersTotal = 0;
+  let projectsBudget = 0;
+  try {
+    const [ordRes, projRes] = await Promise.all([fetch("/api/orders"), fetch("/api/projects")]);
+    if (ordRes.ok) {
+      const ordJson = await ordRes.json();
+      ordersTotal = (ordJson.orders || []).reduce((acc, o) => acc + (Number(o.order_value) || 0), 0);
+    }
+    if (projRes.ok) {
+      const projJson = await projRes.json();
+      projectsBudget = (projJson.projects || []).reduce((acc, p) => acc + (Number(p.budget) || 0), 0);
+    }
+  } catch (e) {}
+
+  if (financeChart) {
+    try { financeChart.destroy(); } catch (e) {}
+  }
+
   financeChart = new Chart(canvas.getContext("2d"), {
-    type: "line",
+    type: "bar",
     data: {
-      labels: FINANCE_LABELS,
-      datasets: [
-        {
-          label: "Actual Revenue (₹L)",
-          data: FINANCE_ACTUAL,
-          borderColor: "#0F6CBD",
-          backgroundColor: "rgba(15,108,189,0.10)",
-          fill: true, tension: 0.35, pointRadius: 3, pointBackgroundColor: "#0F6CBD",
-        },
-        {
-          label: "Projected Revenue (₹L)",
-          data: FINANCE_PROJECTED,
-          borderColor: "#D97706",
-          backgroundColor: "rgba(217,119,6,0.08)",
-          borderDash: [6, 4],
-          fill: true, tension: 0.35, pointRadius: 3, pointBackgroundColor: "#D97706",
-        },
-      ],
+      labels: ["Live Order Value", "Allocated Project Budgets"],
+      datasets: [{
+        label: "Amount (INR)",
+        data: [ordersTotal, projectsBudget],
+        backgroundColor: ["rgba(15,108,189,0.75)", "rgba(217,119,6,0.75)"],
+        borderRadius: 6,
+      }],
     },
     options: {
       responsive: true,
-      interaction: { mode: "index", intersect: false },
-      plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } },
+      plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { font: { family: "JetBrains Mono", size: 10 } } },
-        y: { beginAtZero: false, ticks: { callback: (v) => "₹" + v + "L" } },
+        y: { beginAtZero: true, ticks: { callback: (v) => "₹" + Number(v).toLocaleString("en-IN") } },
       },
     },
   });
 }
 
-function loadCustomProjects() {
-  try { return JSON.parse(localStorage.getItem("trapwire_custom_projects") || "[]"); }
-  catch (e) { return []; }
-}
-function saveCustomProjects(list) {
-  localStorage.setItem("trapwire_custom_projects", JSON.stringify(list));
-}
-
 function projectRowHtml(p) {
   const initial = (p.owner || "?").trim()[0]?.toUpperCase() || "?";
-  const budgetFmt = "₹" + Number(p.budget).toLocaleString("en-IN");
-  return `<tr data-custom="1">
-    <td><b>${p.name}</b></td><td>${p.client}</td>
-    <td><div class="cust-cell"><span class="cust-avatar">${initial}</span>${p.owner}</div></td>
-    <td class="mono">${p.deadline}</td><td class="mono">${budgetFmt}</td>
-    <td><div class="progress-track"><div class="progress-fill" style="width:5%;"></div></div></td>
-    <td><span class="status-pill status-pending">Planning</span></td>
+  const budgetFmt = "₹" + Number(p.budget || 0).toLocaleString("en-IN");
+  const pct = Math.max(0, Math.min(100, Number(p.progress || 0)));
+  const statusText = p.status || "Planning";
+  return `<tr>
+    <td><b>${p.name}</b></td>
+    <td>${p.client || "Internal"}</td>
+    <td><div class="cust-cell"><span class="cust-avatar">${initial}</span>${p.owner || "Admin"}</div></td>
+    <td class="mono">${p.deadline || "—"}</td><td class="mono">${budgetFmt}</td>
+    <td><div class="progress-track"><div class="progress-fill" style="width:${pct}%;"></div></div></td>
+    <td><span class="status-pill status-processing">${statusText}</span></td>
+    <td style="text-align:right;"><button class="btn btn-dark btn-sm" onclick="deleteProjectRow('${p.id}')" style="padding:3px 8px;font-size:0.75rem;">Delete</button></td>
   </tr>`;
 }
 
-function renderCustomProjects() {
+async function renderProjectsFromDb() {
   const tbody = document.getElementById("projectsTableBody");
   if (!tbody) return;
-  tbody.querySelectorAll('tr[data-custom="1"]').forEach((r) => r.remove());
-  loadCustomProjects().forEach((p) => tbody.insertAdjacentHTML("beforeend", projectRowHtml(p)));
-  const total = tbody.querySelectorAll("tr").length;
+  let projects = [];
+  try {
+    const res = await fetch("/api/projects");
+    if (res.ok) {
+      const json = await res.json();
+      projects = json.projects || [];
+    }
+  } catch (e) {}
+
+  tbody.innerHTML = "";
+  if (projects.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted);">No projects stored in the database yet. Click <b>New Project</b> to add one.</td></tr>';
+  } else {
+    projects.forEach((p) => tbody.insertAdjacentHTML("beforeend", projectRowHtml(p)));
+  }
+
   const countEl = document.getElementById("projTableCount");
-  if (countEl) countEl.textContent = `${total} project${total === 1 ? "" : "s"}`;
+  if (countEl) countEl.textContent = `${projects.length} project${projects.length === 1 ? "" : "s"}`;
   const activeEl = document.getElementById("statActiveProjects");
-  if (activeEl) activeEl.textContent = String(6 + loadCustomProjects().length);
+  if (activeEl) activeEl.textContent = String(projects.length);
+  const budgetEl = document.getElementById("statProjectBudget");
+  if (budgetEl) {
+    const totalBudget = projects.reduce((acc, p) => acc + (Number(p.budget) || 0), 0);
+    budgetEl.textContent = "₹" + totalBudget.toLocaleString("en-IN");
+  }
+  const compEl = document.getElementById("statCompletion");
+  if (compEl) {
+    const avg = projects.length > 0 ? Math.round(projects.reduce((acc, p) => acc + (Number(p.progress) || 0), 0) / projects.length) : 0;
+    compEl.textContent = `${avg}%`;
+  }
 }
+
+window.deleteProjectRow = async function(projectId) {
+  try {
+    const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}`, { method: "DELETE" });
+    if (res.ok) {
+      await renderProjectsFromDb();
+      await initFinanceChart();
+      showToast("Project deleted.");
+    }
+  } catch (e) {}
+};
 
 function addProjectNotification(text) {
   const feed = document.getElementById("projectNotifFeed");
   if (!feed) return;
+  if (feed.querySelector("p.muted")) feed.innerHTML = "";
   const row = document.createElement("div");
   row.className = "notif-row";
   row.innerHTML = `<span class="notif-dot dot-indigo"></span>
     <div><b>New project created</b><p>${text}</p><span class="notif-when">Just now</span></div>`;
   feed.prepend(row);
   const countEl = document.getElementById("projNotifCount");
-  if (countEl) countEl.textContent = (parseInt(countEl.textContent, 10) + 1) + " new";
+  if (countEl) {
+    const cur = parseInt(countEl.textContent, 10) || 0;
+    countEl.textContent = `${cur + 1} update${cur + 1 === 1 ? "" : "s"}`;
+  }
 }
 
 document.getElementById("newProjectBtn")?.addEventListener("click", () => openModal("newProjectModal"));
 document.getElementById("closeProjectModal")?.addEventListener("click", () => closeModal("newProjectModal"));
-document.getElementById("newProjectForm")?.addEventListener("submit", (e) => {
+document.getElementById("newProjectForm")?.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const p = {
+  const payload = {
     name: document.getElementById("npName").value.trim(),
-    client: document.getElementById("npClient").value.trim(),
+    client: (document.getElementById("npClient")?.value || "Internal").trim(),
     owner: document.getElementById("npOwner").value.trim(),
     deadline: document.getElementById("npDeadline").value,
-    budget: document.getElementById("npBudget").value,
+    budget: parseFloat(document.getElementById("npBudget").value || "0") || 0,
+    status: "In Progress",
+    progress: 10,
   };
-  if (!p.name || !p.client || !p.owner || !p.deadline || !p.budget) return;
-  const list = loadCustomProjects();
-  list.push(p);
-  saveCustomProjects(list);
-  renderCustomProjects();
-  addProjectNotification(`"${p.name}" for ${p.client}, owned by ${p.owner}.`);
-  e.target.reset();
-  closeModal("newProjectModal");
-  showToast(`Project "${p.name}" created.`);
+  if (!payload.name || !payload.owner) return;
+  try {
+    const res = await fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      await renderProjectsFromDb();
+      await initFinanceChart();
+      addProjectNotification(`"${payload.name}" owned by ${payload.owner}.`);
+      e.target.reset();
+      closeModal("newProjectModal");
+      showToast(`Project "${payload.name}" saved.`);
+    }
+  } catch (err) {
+    showToast("Failed to save project: " + err.message);
+  }
 });
 
 // ---------------------------------------------------------------
-// ADMINISTRATION TAB
+// ADMINISTRATION TAB (database-backed via /api/users)
 // ---------------------------------------------------------------
-function loadCustomUsers() {
-  try { return JSON.parse(localStorage.getItem("trapwire_custom_users") || "[]"); }
-  catch (e) { return []; }
-}
-function saveCustomUsers(list) { localStorage.setItem("trapwire_custom_users", JSON.stringify(list)); }
-
 function userRowHtml(u) {
   const initial = (u.name || "?").trim()[0]?.toUpperCase() || "?";
-  return `<tr data-custom="1">
+  const statusClass = (u.status || "").toLowerCase() === "active" ? "status-delivered" : "status-processing";
+  return `<tr>
     <td><div class="cust-cell"><span class="cust-avatar">${initial}</span>${u.name}</div></td>
-    <td class="mono">${u.email}</td><td>${u.role}</td>
-    <td><span class="status-pill status-processing">Invited</span></td><td class="mono">—</td>
+    <td class="mono">${u.email}</td><td>${u.role || "Member"}</td>
+    <td><span class="status-pill ${statusClass}">${u.status || "Active"}</span></td>
+    <td style="text-align:right;"><button class="btn btn-dark btn-sm" onclick="deleteTeamUser('${u.email}')" style="padding:3px 8px;font-size:0.75rem;">Remove</button></td>
   </tr>`;
 }
 
-function renderCustomUsers() {
+async function renderUsersFromDb() {
   const tbody = document.getElementById("adminUsersTableBody");
   if (!tbody) return;
-  tbody.querySelectorAll('tr[data-custom="1"]').forEach((r) => r.remove());
-  loadCustomUsers().forEach((u) => tbody.insertAdjacentHTML("beforeend", userRowHtml(u)));
-  const total = tbody.querySelectorAll("tr").length;
+  let users = [];
+  try {
+    const res = await fetch("/api/users");
+    if (res.ok) {
+      const json = await res.json();
+      users = json.users || [];
+    }
+  } catch (e) {}
+
+  tbody.innerHTML = "";
+  if (users.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted);">No team members registered in the database yet. Click <b>Invite User</b> to add one.</td></tr>';
+  } else {
+    users.forEach((u) => tbody.insertAdjacentHTML("beforeend", userRowHtml(u)));
+  }
+
   const countEl = document.getElementById("adminTableCount");
-  if (countEl) countEl.textContent = `${total} user${total === 1 ? "" : "s"}`;
+  if (countEl) countEl.textContent = `${users.length} user${users.length === 1 ? "" : "s"}`;
   const totalUsersEl = document.getElementById("statTotalUsers");
-  if (totalUsersEl) totalUsersEl.textContent = String(6 + loadCustomUsers().length);
+  if (totalUsersEl) totalUsersEl.textContent = String(users.length);
+  const activeEl = document.getElementById("statActiveUsers");
+  if (activeEl) activeEl.textContent = String(users.filter((u) => (u.status || "Active") === "Active").length);
+  const roles = new Set(users.map((u) => u.role).filter(Boolean));
+  const rolesEl = document.getElementById("statDistinctRoles");
+  if (rolesEl) rolesEl.textContent = String(roles.size);
+
+  document.querySelectorAll("[data-role-count]").forEach((el) => {
+    const roleName = el.getAttribute("data-role-count");
+    const n = users.filter((u) => (u.role || "").toLowerCase() === (roleName || "").toLowerCase()).length;
+    el.textContent = `${n} member${n === 1 ? "" : "s"}`;
+  });
 }
+
+window.deleteTeamUser = async function(email) {
+  try {
+    const res = await fetch(`/api/users/${encodeURIComponent(email)}`, { method: "DELETE" });
+    if (res.ok) {
+      await renderUsersFromDb();
+      showToast("User removed.");
+    }
+  } catch (e) {}
+};
 
 document.getElementById("inviteUserBtn")?.addEventListener("click", () => openModal("inviteUserModal"));
 document.getElementById("closeInviteModal")?.addEventListener("click", () => closeModal("inviteUserModal"));
-document.getElementById("inviteUserForm")?.addEventListener("submit", (e) => {
+document.getElementById("inviteUserForm")?.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const u = {
+  const payload = {
     name: document.getElementById("iuName").value.trim(),
     email: document.getElementById("iuEmail").value.trim(),
+    dept: (document.getElementById("iuDept")?.value || "Security Operations").trim(),
     role: document.getElementById("iuRole").value,
+    status: "Active",
   };
-  if (!u.name || !u.email) return;
-  const list = loadCustomUsers();
-  list.push(u);
-  saveCustomUsers(list);
-  renderCustomUsers();
-  e.target.reset();
-  closeModal("inviteUserModal");
-  showToast(`Invitation sent to ${u.name}.`);
+  if (!payload.name || !payload.email) return;
+  try {
+    const res = await fetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      await renderUsersFromDb();
+      e.target.reset();
+      closeModal("inviteUserModal");
+      showToast(`Member "${payload.name}" added.`);
+    }
+  } catch (err) {
+    showToast("Failed to save user: " + err.message);
+  }
 });
 
 // ---------------------------------------------------------------
@@ -302,7 +388,7 @@ const DOC_ARTICLES = {
         <ul>
           <li>Always enforce multi-factor authentication (MFA) on corporate portals.</li>
           <li>Never share or copy unmasked customer PII outside the secure TrapWire console.</li>
-          <li>Report suspicious login alerts immediately to the SOC helpline at <code>+91 74836 55370</code>.</li>
+          <li>Report suspicious login alerts immediately to the SOC Desk via the Support Center.</li>
         </ul>
       </div>
     `
@@ -463,7 +549,7 @@ document.getElementById("supportForm")?.addEventListener("submit", (e) => {
   e.preventDefault();
   const msg = document.getElementById("supportMsg");
   const ticketId = "TCK-" + Math.random().toString(36).slice(2, 8).toUpperCase();
-  msg.textContent = `Ticket ${ticketId} submitted. Our team will reach out via support@trapwire.co.in or +91 74836 55370.`;
+  msg.textContent = `Ticket ${ticketId} submitted. Our team will reach out via support@trapwire.co.in.`;
   msg.className = "msg";
   e.target.reset();
   showToast(`Support ticket ${ticketId} created.`);
@@ -488,5 +574,5 @@ document.querySelectorAll(".modal-overlay, .doc-reader-modal").forEach((overlay)
 // Init on load
 // ---------------------------------------------------------------
 initFinanceChart();
-renderCustomProjects();
-renderCustomUsers();
+renderProjectsFromDb();
+renderUsersFromDb();
